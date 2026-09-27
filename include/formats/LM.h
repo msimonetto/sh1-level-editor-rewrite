@@ -1,6 +1,5 @@
 #pragma once
 #include <cstdint>
-#include <cassert>
 #include "Shared.h"
 
 #pragma pack(push, 1)
@@ -8,30 +7,7 @@
 // Adapted from binary template (sh1_model.bt) by Sparagas (https://github.com/Sparagas/Silent-Hill)
 // Relevant to both .PLM and .ILM extensions
 
-// LM_FILE_HEADER (size: 20 bytes)
-struct LM_HEADER {
-    uint16_t        id;
-    uint8_t         version;
-    uint8_t         isLoaded;                       // bool
-    uint8_t         materialCount;
-    uint32_t        ptr_materials;
-    uint8_t         modelCount;
-    uint8_t         __pad_9[3];
-    uint32_t        ptr_modelHdrs;
-    uint32_t        ptr_modelOrder;
-
-    LM_HEADER() {
-        assert(id == 0x30);
-        assert(version == 6);
-    }
-};
-
-struct s_FsImageDesc {
-    uint8_t         tPage[2];
-    uint8_t         u, v;
-    int16_t         clutX, clutY;
-};
-
+// LM_NORMAL (size: 4 bytes)
 struct LM_NORMAL {
     int8_t          nx;
     int8_t          ny;
@@ -39,6 +15,7 @@ struct LM_NORMAL {
     uint8_t         count;
 };
 
+// LM_PRIMITIVE (size: 20 bytes)
 struct LM_PRIMITIVE {
     uint8_t         u1, v1;
     uint16_t        clutX : 6;                      // Upper six bits of 10 bits of X coordinate value for CLUT on the VRAM
@@ -54,55 +31,88 @@ struct LM_PRIMITIVE {
     uint8_t         normalIdx[4];
 };
 
+// LM_MESH_HEADER (size: 24 bytes)
 struct LM_MESH_HEADER {
     uint8_t         primitiveCount;
     uint8_t         vertexCount;
     uint8_t         normalCount;
-    uint8_t         unkCount_3;
+    uint8_t         unkCount_3;                     // Unknown in Sparagas, related to ptr_unkPtr_14. 
+                                                    // Ambient occlusion. For unlit models, light intensity bytes are passed to GTE into shading buffer.
     uint32_t        ptr_primitives;
-    uint32_t        ptr_verticesXy;
+    uint32_t        ptr_verticesXY;
     uint32_t        ptr_verticesZ;
     uint32_t        ptr_normals;
-    uint32_t        ptr_unkPtr_14;
+    uint32_t        ptr_unkPtr_14;                  // Collected from unkCount_3
 };
 
+// LM_MODEL_HEADER (size: 16 bytes)
 struct LM_MODEL_HEADER {
     u_Filename      name;
     uint8_t         meshCount;
     uint8_t         vertexOffset;
     uint8_t         normalOffset;
     uint8_t         field_B_0       : 1;
-    uint8_t         field_B_1       : 3;            // Value used in `func_800571D0` switch.
-    uint8_t         field_B_4       : 2;
+    uint8_t         field_B_1       : 3;            // Unknown in Sparagas, related to func_800571D0
+                                                    // PS1 ordering table 'depth bin', similar to Z-buffer in other engines
+    uint8_t         field_B_4       : 2;            // Lighting mode (0 = unlit/flat, 1 = directional/GTE, 2 = ambient/point -- e.g., flashlight)
     uint8_t         unk_B_6         : 2;
     uint32_t        ptr_meshHdrs;
 };
 
+// s_FsImageDesc (size: 8 bytes)
+struct s_FsImageDesc {
+    uint8_t         tPage[2];
+    uint8_t         u, v;
+    int16_t         clutX, clutY;
+};
+
+// LM_TEXTURE (size: 24 bytes)
 struct LM_TEXTURE {
     s_FsImageDesc   imageDesc;
     u_Filename      name;
     uint32_t        queueIdx;
     int8_t          refCount;
+    uint8_t         __pad[3];
 };
 
-// s_Material (size: 24 bytes)
+// LM_MATERIAL (size: 24 bytes)
 struct LM_MATERIAL {
     u_Filename      name;
     uint32_t        ptr_texture; 
     uint8_t         field_C;
     uint8_t         unk_D[1];
-    uint8_t         tPage;
+    uint8_t         tPage;                          // Unknown in Sparagas, field_E
+                                                    // TPage attribute byte (X/Y bits for texture, color depth 4 or 8-bit, semi-transparency)
     uint8_t         field_F;
-    uint16_t        base_clutY;
-    uint16_t        field_12;
+    uint16_t        base_clutY;                     // Active CLUT attribute word
+    uint16_t        field_12;                       // Original CLUT in file
 
     union {
         uint8_t     u8[2];
         uint16_t    u16;
-    } field_14;
+    } field_14;                                     // Main/base UV offsets (as 2 bytes)
 
     union {
         uint8_t     u8[2];
         uint16_t    u16;
     } field_16;
 };
+
+// LM_FILE_HEADER (size: 20 bytes)
+struct LM_HEADER {
+    uint8_t         id;
+    uint8_t         version;
+    uint8_t         isLoaded;                       // bool
+    uint8_t         materialCount;
+    uint32_t        ptr_materials;
+    uint8_t         modelCount;
+    uint8_t         __pad[3];
+    uint32_t        ptr_modelHdrs;
+    uint32_t        ptr_modelOrder;
+
+    bool isValid() const {
+        return ((id == 0x30) && (version == 6));
+    }
+};
+
+#pragma pack(pop)

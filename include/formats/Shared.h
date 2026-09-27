@@ -5,7 +5,6 @@
 
 // Adapted from binary template (sh1_model.bt) by Sparagas (https://github.com/Sparagas/Silent-Hill)
 
-// Embedded structs
 // MATRIX (size: 32 bytes)
 struct MATRIX {
     int16_t         m[3][3];                        // 3x3 Euler rotation matrix
@@ -26,7 +25,10 @@ struct DVECTOR {
     int16_t         vy;
 };
 
-struct u_Filename {
+// u_Filename (size: 8 bytes)
+union u_Filename {
     char            str[8];
     uint32_t        u32[2];
 };
+
+#pragma pack(pop)
