@@ -1,6 +1,6 @@
 #include <string>
 
-namespace FileMGMT {
+namespace FileManager {
 
 const std::string supportedExtensions[4] = {
 	"IPD",		// Chunk files (geometry, collisions, etc)
