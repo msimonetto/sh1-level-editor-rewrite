@@ -71,7 +71,8 @@ struct LM_TEXTURE {
     s_FsImageDesc   imageDesc;
     u_Filename      name;
     uint32_t        queueIdx;
-    int8_t          refCount;
+    int8_t          refCount;                       // VRAM cache lifetime across shared models/chunks
+                                                    // Incremented per chunk/model, decremented until reaching 0 (offloaded)
     uint8_t         __pad[3];
 };
 

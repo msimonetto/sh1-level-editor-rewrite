@@ -1,6 +1,7 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include <unordered_map>
 
 #include "formats/IPD.h"
 #include "formats/LM.h"
@@ -24,6 +25,7 @@ struct ModelData {
 struct LocalLMData {
 	LM_HEADER					header;
 	std::vector<LM_MATERIAL>	materials;
+	std::unordered_map<uint32_t, LM_TEXTURE>	texturePool;		// Mapped by file offset (material.ptr_texture)
 	std::vector<ModelData>		models;
 	// std::vector<ModelOrder>		modelOrder;
 };

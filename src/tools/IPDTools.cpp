@@ -5,6 +5,7 @@
 #include <format>
 #include <bit>
 #include <filesystem>
+#include <unordered_map>
 
 #include "core/FileManager.h"
 #include "formats/IPD.h"
@@ -51,7 +52,9 @@ void IPDChunk::UnpackToVector(ptr_T basePointer, size_t count, std::vector<T>& s
 	structVector.resize(count);
 	if (count == 0 || !basePointer) { return; }
 
-	IPDChunk::UnpackToStruct(basePointer, count * sizeof(T), structVector);
+	for (size_t i = 0; i < count; ++i) {
+		IPDChunk::UnpackToStruct(basePointer + i * sizeof(T), sizeof(T), structVector[i]);
+	}
 }
 
 // Binary unpacking, following hierarchial order and using dynamically allocated data structs
@@ -90,6 +93,19 @@ int IPDChunk::UnpackIPDToMem() {
 			sizeof(LM_MATERIAL),
 			material
 		);
+
+		// See if the material's texture is contained in texture pool (unordered_map), if not, add it
+		if (!localLMData_.texturePool.contains(material.ptr_texture)) {
+			LM_TEXTURE uniqueTexture;
+
+			IPDChunk::UnpackToStruct(
+				material.ptr_texture,
+				sizeof(LM_TEXTURE),
+				uniqueTexture
+			);
+
+			localLMData_.texturePool.insert({material.ptr_texture, uniqueTexture});
+		}
 	}
 
 	// 2. Local LM -> Models -> Meshes
