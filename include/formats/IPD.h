@@ -1,7 +1,6 @@
 #pragma once
 #include <cstdint>
 #include "Shared.h"
-#include "LM.h"
 
 #pragma pack(push, 1)
 
@@ -16,18 +15,19 @@ struct IPD_COLL_SURFACE {
     uint16_t        disableHeight       : 3;        // bool(s?)
     uint16_t        field_6_8           : 3;        // related to special collision triggers (s_CollisionState)
     uint16_t        field_6_11          : 4;        // surface slope?
-    uint16_t        field_6_15          : 1;        // missing from decomp
-    int16_t         tiltAngleX;                     // q7_8
-    int16_t         tiltAngleZ;                     // q7_8
+    uint16_t        __pad               : 1;
+    int16_t         tiltAngleX;                     // Slope gradient (dY/dX, Q7.8)
+    int16_t         tiltAngleZ;                     // Slope gradient (dY/dZ, Q7.8)
 };
 
 // IPD_COLL_SUBCELL (size: 10 bytes)
+//      2D line segments that are floor-material boundaries OR solid physical walls 
 struct IPD_COLL_SUBCELL {
-    int16_t         field_0_0           : 14;       // internal X, Q7.8
-    uint16_t        field_0_14          : 2;        // 2 bits for collision group ID
-    int16_t         field_2_0           : 14;       // internal Y, Q7.8
-    uint16_t        field_2_14          : 2;        // 2 bits for collision group ID
-    int16_t         field_4;                        // internal Z
+    int16_t         collLineX           : 14;       // 2D line transform, loaded into GTE R11
+    uint16_t        collTriggerUpper    : 2;        // Collision trigger upper section
+    int16_t         collLineZ           : 14;       // 2D line transform, loaded into GTE R12
+    uint16_t        collTriggerLower    : 2;        // Collision trigger lower section
+    int16_t         collLineLength;
     uint8_t         splitVertexIdx0;
     uint8_t         splitVertexIdx1;
     uint8_t         surfaceIdx0;
@@ -36,19 +36,23 @@ struct IPD_COLL_SUBCELL {
 
 // IPD_COLL_SUBCELL_RANGE (size: 4 bytes)
 struct IPD_COLL_SUBCELL_RANGE {
-    int16_t         field_0;
-    int16_t         field_2;
+    int16_t         ptr_wallCylinder_indices_start;
+    int16_t         ptr_floorSurface_indices_start;
 };
 
-// IPD_COLL_DATA_18 (size: 10 bytes) -- unknown
-struct IPD_COLL_DATA_18 {
-    uint16_t        groundType          : 5;        // related to e_GroundType
-    uint16_t        disableHeight       : 3;        // bool(s?)
-    uint16_t        field_0_8           : 4;
-    uint16_t        field_0_12          : 3;
-    uint16_t        field_0_15          : 1;
-    SVECTOR3        offset;                         // q7_8
-    uint16_t        field_8;                        // q7_8
+// IPD_COLL_CYLINDER (size: 10 bytes)
+struct IPD_COLL_CYLINDER {
+    uint16_t        groundType          : 5;        // `e_GroundType` of the obstacle
+    uint16_t        disableHeight       : 3;        // bool -- whether the top surface can be stood on
+                                                    //      false = standard obstacle (crate, curb)
+                                                    //      true  = infinitely tall obstacle (tree)
+    uint16_t        eventTrigger        : 4;        // dynamic enabling/disabling of obstacle
+    uint16_t        unknown             : 3;        // Set as '0' across all IPD files
+                                                    // Hypothesis: cylinder interaction type (search/inspect, vault) but unused in game/decomp?
+    uint16_t        __pad               : 1;
+    SVECTOR3        offset;                         // (vx, vz) -- position on map plane (relative to its center)
+                                                    // vy       -- top surface/elevation
+    uint16_t        radius;                         // r        -- horizontal radius of cylinder
 };
 
 // IPD_COLL_HEADER (size: 308 bytes)
@@ -69,10 +73,10 @@ struct IPD_COLL_HEADER {
     int8_t          subcellCountX;
     int8_t          subcellCountZ;
     uint32_t        ptr_subcellRanges;
-    uint16_t        ptr_28_count;
-    uint16_t        ptr_2C_count;
-    uint32_t        ptr_28;
-    uint32_t        ptr_2C;
+    uint16_t        ptr_wallCylinder_indices_count;
+    uint16_t        ptr_floorSurface_indices_count;
+    uint32_t        ptr_wallCylinder_indices;
+    uint32_t        ptr_floorSurface_indices;
     uint8_t         subcellCheckCount;
     uint8_t         __pad[3];
     uint8_t         subcellCheckIdx[256];
@@ -135,22 +139,22 @@ struct IPD_BILLBOARD_INSTANCE {
     int8_t          __pad;
 };
 
-// IPD_HEADER (size: 84 bytes)
+// IPD_HEADER (size: 392 bytes w/ in-line)
 struct IPD_HEADER {
     uint8_t         id;
     uint8_t         isLoaded;
     int8_t          cellX;
     int8_t          cellZ;
-    uint32_t        ptr_LM_HEADER;
+    uint32_t        ptr_LM_HEADER;					// Internally embedded LMs
     uint8_t         modelCount;
     uint8_t         modelBufferCount;
     uint8_t         modelOrderCount;
-    int8_t          __pad[9];
+    uint8_t         __pad[9];
     uint32_t        ptr_modelInfos;
     uint32_t        ptr_modelBuffers;
     IPD_SUBCELL_VISIBILITY_TABLE    visibilityTable;
     uint32_t        ptr_modelOrderList;             // Missing from sh1-level-editor
-    IPD_COLL_HEADER collisionData;
+    IPD_COLL_HEADER collisionHeader;				// Previously separate in sh1-level-editor but connected in Sparagas
 
     bool isValid() const {
         return (id == 0x14);
