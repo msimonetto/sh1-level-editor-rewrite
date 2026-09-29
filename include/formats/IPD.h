@@ -73,8 +73,8 @@ struct IPD_COLL_HEADER {
     int8_t          subcellCountX;
     int8_t          subcellCountZ;
     uint32_t        ptr_subcellRanges;
-    uint16_t        ptr_wallCylinder_indices_count;
-    uint16_t        ptr_floorSurface_indices_count;
+    uint16_t        ptr_wallCylinder_indicesCount;  // Clarify the wording on these next 4 members
+    uint16_t        ptr_floorSurface_indicesCount;
     uint32_t        ptr_wallCylinder_indices;
     uint32_t        ptr_floorSurface_indices;
     uint8_t         subcellCheckCount;
@@ -92,7 +92,8 @@ struct IPD_MODEL_INSTANCE {
 struct IPD_MODEL_INFO {
     uint8_t         isGlobalPlm;                    // (0) inside IPD, (1) from `*_GLB.PLM`
     int8_t          __pad[3];
-    u_Filename      name;
+    u_Filename      name;							// Asset name within the PLM
+													// 		based purely on prefix? (verify)
     uint32_t        ptr_modelHdr;
 };
 

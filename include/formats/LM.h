@@ -36,13 +36,13 @@ struct LM_MESH_HEADER {
     uint8_t         primitiveCount;
     uint8_t         vertexCount;
     uint8_t         normalCount;
-    uint8_t         unkCount_3;                     // Unknown in Sparagas, related to ptr_unkPtr_14. 
+    uint8_t         shadingCount;                   // Unknown in Sparagas, related to ptr_unkPtr_14. 
                                                     // Ambient occlusion. For unlit models, light intensity bytes are passed to GTE into shading buffer.
     uint32_t        ptr_primitives;
     uint32_t        ptr_verticesXY;
     uint32_t        ptr_verticesZ;
     uint32_t        ptr_normals;
-    uint32_t        ptr_unkPtr_14;                  // Collected from unkCount_3
+    uint32_t        ptr_shadings;                 	// Collected from unkCount_3
 };
 
 // LM_MODEL_HEADER (size: 16 bytes)
