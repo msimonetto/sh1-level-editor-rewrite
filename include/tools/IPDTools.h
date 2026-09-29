@@ -7,17 +7,42 @@
 
 namespace IPDTools {
 
+struct MeshData {
+	LM_MESH_HEADER				header;
+	std::vector<LM_PRIMITIVE>	primitives;
+	std::vector<DVECTOR> 		verticesXY;
+	std::vector<int16_t>		verticesZ;
+	std::vector<LM_NORMAL>		normals;
+	std::vector<uint8_t>		shadings;		
+};
+
+struct ModelData {
+	LM_MODEL_HEADER				header;
+	std::vector<MeshData>		meshes;
+};
+
+struct LocalLMData {
+	LM_HEADER					header;
+	std::vector<LM_MATERIAL>	materials;
+	std::vector<ModelData>		models;
+	// std::vector<ModelOrder>		modelOrder;
+};
+
+struct ModelLookupData {
+	int8_t						placeholder;
+};
+
+struct ModelBufferData {
+	int8_t						placeholder;
+};
+
 class IPDChunk {
 	private:
 		// ~~~~~~~~ Structs ~~~~~~~~~
-		// Header
 		IPD_HEADER 			header_;
-
-		// Embedded chunk models
-		// LM_HEADER -> LM_MODEL_HEADER (# = modelCount)
-		LM_HEADER  			embeddedLmHeader_;
-		std::vector<LM_MODEL_HEADER>	embeddedModelHeaders_;
-		std::vector<LM_MESH_HEADER>		embeddedMeshHeaders_;
+		LocalLMData			localLMData_;
+		ModelLookupData		modelLookupData_;
+		ModelBufferData		modelBufferData_;
 
 		// ~~~~~~~~ I/O ~~~~~~~~~
 		std::string 		path_;
@@ -36,9 +61,10 @@ class IPDChunk {
 		~IPDChunk();
 
 		template <typename T>
-		int UnpackSectionToStruct(unsigned int baseOffset,
-								  unsigned int length,
-								  T& outStruct);
+		void UnpackToStruct(unsigned int baseOffset, unsigned int length, T& outStruct);
+
+		template <typename T, typename ptr_T>
+		void UnpackToVector(ptr_T basePointer, size_t count, std::vector<T>& structVector);
 
 		int UnpackIPDToMem();
 		int GetSizeInPath();
