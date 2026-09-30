@@ -5,7 +5,7 @@
 
 namespace HexOperations {
 
-template <std::integral T>
+template <typename T>
 std::string AsHex(T x) {
     // Cast to unsigned and words swapped
     auto unsignedX = std::byteswap(static_cast<std::make_unsigned_t<T>>(x));
