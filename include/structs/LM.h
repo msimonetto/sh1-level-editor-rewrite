@@ -33,30 +33,30 @@ struct LM_PRIMITIVE {
 
 // LM_MESH_HEADER (size: 24 bytes)
 struct LM_MESH_HEADER {
-    uint8_t         primitiveCount;
-    uint8_t         vertexCount;
-    uint8_t         normalCount;
-    uint8_t         shadingCount;                   // Unknown in Sparagas, related to ptr_unkPtr_14. 
+    uint8_t         count_LM_PRIMITIVE;
+    uint8_t         count_Vertex;
+    uint8_t         count_LM_NORMAL;
+    uint8_t         count_Shading;                  // Unknown in Sparagas, related to offset_unkoffset_14. 
                                                     // Ambient occlusion. For unlit models, light intensity bytes are passed to GTE into shading buffer.
-    uint32_t        ptr_primitives;
-    uint32_t        ptr_verticesXY;
-    uint32_t        ptr_verticesZ;
-    uint32_t        ptr_normals;
-    uint32_t        ptr_shadings;                 	// Collected from unkCount_3
+    uint32_t        offset_LM_PRIMITIVE;
+    uint32_t        offset_VertexXY;
+    uint32_t        offset_VertexZ;
+    uint32_t        offset_LM_NORMAL;
+    uint32_t        offset_Shading;                 // Collected from unkCount_3
 };
 
 // LM_MODEL_HEADER (size: 16 bytes)
 struct LM_MODEL_HEADER {
     u_Filename      name;
     uint8_t         meshCount;
-    uint8_t         vertexOffset;
-    uint8_t         normalOffset;
+    uint8_t         u_offset_vertex;                // Why would these be standalone and uint8_t?
+    uint8_t         u_offset_normal;                // Unsure what these do
     uint8_t         field_B_0       : 1;
     uint8_t         field_B_1       : 3;            // Unknown in Sparagas, related to func_800571D0
                                                     // PS1 ordering table 'depth bin', similar to Z-buffer in other engines
     uint8_t         field_B_4       : 2;            // Lighting mode (0 = unlit/flat, 1 = directional/GTE, 2 = ambient/point -- e.g., flashlight)
     uint8_t         unk_B_6         : 2;
-    uint32_t        ptr_meshHdrs;
+    uint32_t        offset_LM_MESH_HEADER;
 };
 
 // s_FsImageDesc (size: 8 bytes)
@@ -79,7 +79,7 @@ struct LM_TEXTURE {
 // LM_MATERIAL (size: 24 bytes)
 struct LM_MATERIAL {
     u_Filename      name;
-    uint32_t        ptr_texture; 
+    uint32_t        offset_texture; 
     uint8_t         field_C;
     uint8_t         unk_D[1];
     uint8_t         tPage;                          // Unknown in Sparagas, field_E
@@ -104,12 +104,12 @@ struct LM_HEADER {
     uint8_t         id;
     uint8_t         version;
     uint8_t         isLoaded;                       // bool
-    uint8_t         materialCount;
-    uint32_t        ptr_materials;
-    uint8_t         modelCount;
+    uint8_t         count_LM_MATERIAL;
+    uint32_t        offset_LM_MATERIAL;
+    uint8_t         count_LM_MODEL_HEADER;
     uint8_t         __pad[3];
-    uint32_t        ptr_modelHdrs;
-    uint32_t        ptr_modelOrder;
+    uint32_t        offset_LM_MODEL_HEADER;
+    uint32_t        offset_LM_MODEL_ORDER;
 
     bool isValid() const {
         return ((id == 0x30) && (version == 6));

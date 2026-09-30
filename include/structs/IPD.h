@@ -36,8 +36,8 @@ struct IPD_COLL_SUBCELL {
 
 // IPD_COLL_SUBCELL_RANGE (size: 4 bytes)
 struct IPD_COLL_SUBCELL_RANGE {
-    int16_t         ptr_wallCylinder_indices_start;
-    int16_t         ptr_floorSurface_indices_start;
+    int16_t         offset_wallCylinder_indices_start;
+    int16_t         offset_floorSurface_indices_start;
 };
 
 // IPD_COLL_CYLINDER (size: 10 bytes)
@@ -59,32 +59,32 @@ struct IPD_COLL_CYLINDER {
 struct IPD_COLL_HEADER {
     int32_t         positionX;                      // Chunk world X (Q23.8)
     int32_t         positionZ;                      // Chunk world Z (Q23.8)
-    uint8_t         splitVertexCount;
-    uint8_t         surfaceCount;
-    uint8_t         subcellCount;
-    uint8_t         cylinderColliderCount;
-    uint32_t        ptr_splitVertices;
-    uint32_t        ptr_surfaces;
-    uint32_t        ptr_subcells;                   // Adjusted from Sparagas, ptr_14 -> ptr_subcells
+    uint8_t         count_splitVertex;
+    uint8_t         count_surface;
+    uint8_t         count_subcell;
+    uint8_t         count_cylinderCollider;
+    uint32_t        offset_splitVertices;
+    uint32_t        offset_surfaces;
+    uint32_t        offset_subcells;                // Adjusted from Sparagas, offset_14 -> offset_subcells
                                                     // Wall/obstacle elements, IpdColl_TestWallElement.c (verify)
-    uint32_t        ptr_cylinderColliders;          // Adjusted from Sparagas, ptr_18 -> ptr_cylinderColliders
+    uint32_t        offset_cylinderColliders;       // Adjusted from Sparagas, offset_18 -> offset_cylinderColliders
                                                     // Cylindrical colliders, IpdColl_TestFloorElement.c (street poles, trees, verify)
     int16_t         subcellSize;
-    int8_t          subcellCountX;
-    int8_t          subcellCountZ;
-    uint32_t        ptr_subcellRanges;
-    uint16_t        ptr_wallCylinder_indicesCount;  // Clarify the wording on these next 4 members
-    uint16_t        ptr_floorSurface_indicesCount;
-    uint32_t        ptr_wallCylinder_indices;
-    uint32_t        ptr_floorSurface_indices;
-    uint8_t         subcellCheckCount;
+    int8_t          count_subcellX;
+    int8_t          count_subcellZ;
+    uint32_t        offset_subcellRanges;
+    uint16_t        count_offset_wallCylinder_indices;  // Clarify the wording on these next 4 members
+    uint16_t        count_offset_floorSurface_indices;
+    uint32_t        offset_wallCylinder_indices;
+    uint32_t        offset_floorSurface_indices;
+    uint8_t         count_subcellCheck;
     uint8_t         __pad[3];
     uint8_t         subcellCheckIdx[256];
 };
 
 // IPD_MODEL_INSTANCE (size: 36 bytes)
 struct IPD_MODEL_INSTANCE {
-    uint32_t        ptr_modelHdr;                   // connects to LM_MODEL_HEADER
+    uint32_t        offset_modelHdr;                   // connects to LM_MODEL_HEADER
     MATRIX          mat;
 };
 
@@ -94,23 +94,23 @@ struct IPD_MODEL_INFO {
     int8_t          __pad[3];
     u_Filename      name;							// Asset name within the PLM
 													// 		based purely on prefix? (verify)
-    uint32_t        ptr_modelHdr;
+    uint32_t        offset_modelHdr;
 };
 
 // IPD_MODEL_BUFFER (size: 24 bytes)
 struct IPD_MODEL_BUFFER {
-    uint8_t         modelInstanceCount;             // modelInstances count
-    uint8_t         billboardInstanceCount;         // Unknown in Sparagas: field_1 -> billboardCount
+    uint8_t         count_modelInstance;             // modelInstances count
+    uint8_t         count_billboardInstance;         // Unknown in Sparagas: field_1 -> billboardCount
                                                     //      Streetlamp glows, light source flares
-    uint8_t         subcellCount;
+    uint8_t         count_subcell;
     int8_t          __pad;
     int16_t         minX;
     int16_t         maxX;
     int16_t         minZ;
     int16_t         maxZ;
-    uint32_t        ptr_modelInstances;
-    uint32_t        ptr_billboardInstances;         // Unknown in Sparagas: ptr_field_10 -> ptr_billboardInstances
-    uint32_t        ptr_subcellPositions;
+    uint32_t        offset_modelInstances;
+    uint32_t        offset_billboardInstances;         // Unknown in Sparagas: offset_field_10 -> offset_billboardInstances
+    uint32_t        offset_subcellPositions;
 };
 
 // IPD_SUBCELL_RANGE (size: 2 bytes)
@@ -146,15 +146,15 @@ struct IPD_HEADER {
     uint8_t         isLoaded;
     int8_t          cellX;
     int8_t          cellZ;
-    uint32_t        ptr_LM_HEADER;					// Internally embedded LMs
-    uint8_t         modelCount;
+    uint32_t        offset_LM_HEADER;					// Internally embedded LMs
+    uint8_t         count_LM_MODEL_HEADER;
     uint8_t         modelBufferCount;
     uint8_t         modelOrderCount;
     uint8_t         __pad[9];
-    uint32_t        ptr_modelInfos;
-    uint32_t        ptr_modelBuffers;
+    uint32_t        offset_modelInfos;
+    uint32_t        offset_modelBuffers;
     IPD_SUBCELL_VISIBILITY_TABLE    visibilityTable;
-    uint32_t        ptr_modelOrderList;             // Missing from sh1-level-editor
+    uint32_t        offset_LM_MODEL_ORDER;          // Missing from sh1-level-editor
     IPD_COLL_HEADER collisionHeader;				// Previously separate in sh1-level-editor but connected in Sparagas
 
     bool isValid() const {
