@@ -27,7 +27,7 @@ int main() {
 	auto chunk1 = std::make_unique<Chunk>(sourceDir, filename, *texturePool, *globalObjects);
 
     // Load into memory (most work is here currently)
-	chunk1->UnpackIPDToMem();
+	chunk1->UnpackChunkToMem();
 
     // Later: Perform some fixed position manipulations
     // Later: Perform some dynamic manipulations

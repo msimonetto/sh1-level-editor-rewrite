@@ -6,6 +6,7 @@
 
 // Adapted from binary template (sh1_model.bt) by Sparagas (https://github.com/Sparagas/Silent-Hill)
 
+// ~~~~~~~~~~~~ COLLISION ~~~~~~~~~~~~
 // IPD_COLL_SURFACE (size: 12 bytes)
 struct IPD_COLL_SURFACE {
     int16_t         relativeX;                      // Relative X (Q7.8)
@@ -55,21 +56,26 @@ struct IPD_COLL_CYLINDER {
     uint16_t        radius;                         // r        -- horizontal radius of cylinder
 };
 
+struct IPD_COLL_SPLIT_VERTEX {
+    uint8_t         placeholder;                    // Unknown and not mapped out properly
+                                                    // May need to pluralise
+};
+
 // IPD_COLL_HEADER (size: 308 bytes)
 struct IPD_COLL_HEADER {
     int32_t         positionX;                      // Chunk world X (Q23.8)
     int32_t         positionZ;                      // Chunk world Z (Q23.8)
-    uint8_t         count_splitVertex;
-    uint8_t         count_surface;
-    uint8_t         count_subcell;
-    uint8_t         count_cylinderCollider;
-    uint32_t        offset_splitVertices;
-    uint32_t        offset_surfaces;
-    uint32_t        offset_subcells;                // Adjusted from Sparagas, offset_14 -> offset_subcells
+    uint8_t         count_IPD_COLL_SPLIT_VERTEX;    // Missing
+    uint8_t         count_IPD_COLL_SURFACE;
+    uint8_t         count_IPD_COLL_SUBCELL;
+    uint8_t         count_IPD_COLL_CYLINDER;
+    uint32_t        offset_IPD_COLL_SPLIT_VERTEX;
+    uint32_t        offset_IPD_COLL_SURFACE;
+    uint32_t        offset_IPD_COLL_SUBCELL;        // Adjusted from Sparagas, offset_14 -> offset_subcells
                                                     // Wall/obstacle elements, IpdColl_TestWallElement.c (verify)
-    uint32_t        offset_cylinderColliders;       // Adjusted from Sparagas, offset_18 -> offset_cylinderColliders
+    uint32_t        offset_IPD_COLL_CYLINDER;       // Adjusted from Sparagas, offset_18 -> offset_cylinderColliders
                                                     // Cylindrical colliders, IpdColl_TestFloorElement.c (street poles, trees, verify)
-    int16_t         subcellSize;
+    int16_t         subcellSize;                    // This and everything below needs to be verified and improved!
     int8_t          count_subcellX;
     int8_t          count_subcellZ;
     uint32_t        offset_subcellRanges;
@@ -140,7 +146,7 @@ struct IPD_BILLBOARD_INSTANCE {
     int8_t          __pad;
 };
 
-// IPD_HEADER (size: 392 bytes w/ in-line)
+// IPD_HEADER (size: 84 bytes w/o collision)
 struct IPD_HEADER {
     uint8_t         id;
     uint8_t         isLoaded;
@@ -155,7 +161,6 @@ struct IPD_HEADER {
     uint32_t        offset_modelBuffers;
     IPD_SUBCELL_VISIBILITY_TABLE    visibilityTable;
     uint32_t        offset_LM_MODEL_ORDER;          // Missing from sh1-level-editor
-    IPD_COLL_HEADER collisionHeader;				// Previously separate in sh1-level-editor but connected in Sparagas
 
     bool isValid() const {
         return (id == 0x14);
