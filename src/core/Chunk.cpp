@@ -4,6 +4,7 @@
 #include <filesystem>
 
 #include "core/Chunk.h"
+#include "core/Collision.h"
 #include "core/DataStructs.h"
 #include "core/GlobalObjects.h"
 #include "core/DataOperations.h"
@@ -42,7 +43,7 @@ Chunk::~Chunk() {
 }
 
 // ~~~~~~~~~~~ READING IPD FILES ~~~~~~~~~~~
-int Chunk::UnpackIPDToMem() {
+bool Chunk::UnpackChunkToMem() {
 
 	// Open IPD file
 	file_.stream.open(file_.path, std::ios::in | std::ios::binary);
@@ -58,11 +59,11 @@ int Chunk::UnpackIPDToMem() {
 		return -1;
 	}
 
-	// Unpack Internal LM header
-	int internalLMBaseOffset	= header_.offset_LM_HEADER;
+	// Unpack internal LM header
+	int internalLMBaseOffset = header_.offset_LM_HEADER;
 	UnpackToStruct(internalLMBaseOffset, sizeof(LM_HEADER), internalLMData_.header, file_);
 	
-	// Unpack Internal LM data
+	// Unpack internal LM data
 	UnpackLMData(internalLMData_, internalLMBaseOffset, texturePool_, file_);
 
 	// TODO: Model lookup table
@@ -72,11 +73,13 @@ int Chunk::UnpackIPDToMem() {
 	// TODO: Model buffer table
 
 	// TODO: Collision
+	UnpackToStruct(sizeof(IPD_HEADER), sizeof(IPD_COLL_HEADER), collisionData_.header, file_);
+	UnpackCollisionData(collisionData_, file_);
 
 	return 0;
 }
 
-int Chunk::PackMemToIPD() {
+bool Chunk::PackMemToIPD() {
 	return 0;
 }
 

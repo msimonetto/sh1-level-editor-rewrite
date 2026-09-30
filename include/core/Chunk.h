@@ -7,6 +7,7 @@
 #include <variant>
 #include <unordered_map>
 
+#include "core/Collision.h"
 #include "core/DataStructs.h"
 #include "core/GlobalObjects.h"
 #include "core/DataOperations.h"
@@ -14,7 +15,6 @@
 #include "structs/IPD.h"
 #include "structs/LM.h"
 
-// Chunk (stored in memory)
 class Chunk {
 	private:
 		// ~~~~~~~~ Structs ~~~~~~~~~
@@ -22,6 +22,7 @@ class Chunk {
 		LMData				internalLMData_;						// models, materials, ...
 		std::vector<IPD_MODEL_INFO>		modelLookupTable_;
 		std::vector<IPD_MODEL_BUFFER>	modelBufferTable_;
+		CollisionData		collisionData_;
 
 		TexturePool&		texturePool_;
 		GlobalObjects&		globalObjects_;
@@ -43,8 +44,8 @@ class Chunk {
 			  TexturePool& texturePool, GlobalObjects& globalObjects);
 		~Chunk();
 
-		int UnpackIPDToMem();
-		int PackMemToIPD();
+		bool UnpackChunkToMem();
+		bool PackMemToIPD();
 
 		int GetSizeInPath();
 		int GetSizeInMem();
