@@ -8,6 +8,10 @@
 #include "structs/TIM.h"
 #include "structs/Shared.h"
 
-TexturePool::TexturePool(const std::filesystem::path& sourceDir) {
+TexturePool::TexturePool(const std::filesystem::path& sourceDir) : sourceDir_(sourceDir) {
     std::cout << "[INFO]: Constructed texture pool from path!" << std::endl;
+}
+
+TexturePool::~TexturePool() {
+    std::cout << "[INFO]: Destroyed texture pool!" << std::endl;
 }

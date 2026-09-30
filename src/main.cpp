@@ -17,14 +17,14 @@ int main() {
     std::string filename = "THR0000.IPD";
 
     // Create shared texture pool
-    auto texturePool = std::make_unique<TexturePool>();
+    auto texturePool = std::make_unique<TexturePool>(sourceDir);
 
     // Create prefix-specific global object bank
-    auto globalObjects = std::make_unique<GlobalObjects>(&texturePool, sourceDir);
+    auto globalObjects = std::make_unique<GlobalObjects>(sourceDir, *texturePool);
     
     // Create chunk (THR0000.IPD)
     // Note: Overloading for major coords (as opposed to filename) will be introduced eventually
-	auto chunk1 = std::make_unique<Chunk>(&texturePool, &globalObjects, sourceDir, filename);
+	auto chunk1 = std::make_unique<Chunk>(sourceDir, filename, *texturePool, *globalObjects);
 
     // Load into memory (most work is here currently)
 	chunk1->UnpackIPDToMem();

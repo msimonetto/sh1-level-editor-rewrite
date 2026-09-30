@@ -12,8 +12,10 @@
 class GlobalObjects {
 	private:
 		// ~~~~~~~~ Structs ~~~~~~~~~
-		LM_HEADER			header_;				// Contains modelCount and materialCount
+		LM_HEADER			header_;				// Contains count_LM_MODEL_HEADER and count_LM_MATERIAL
 		LMData				globalLMData_;
+
+		TexturePool&		texturePool_;
 
 		// ~~~~~~~~ I/O ~~~~~~~~~
 		std::filesystem::path	sourceDir_;
@@ -28,6 +30,6 @@ class GlobalObjects {
 							legal;
 
 	public:
-		GlobalObjects(TexturePool& texturePool, const std::filesystem::path& sourceDir);
+		GlobalObjects(const std::filesystem::path& sourceDir, TexturePool& texturePool);
 		~GlobalObjects();
 };

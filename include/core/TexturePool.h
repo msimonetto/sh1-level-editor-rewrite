@@ -11,7 +11,7 @@
 
 class TexturePool {
     private:
-        std::unordered_map<uint32_t, LM_TEXTURE>	texturePool;		// Mapped by file offset (material.ptr_texture)
+        std::unordered_map<uint32_t, LM_TEXTURE>	texturePool;		// Mapped by file offset (material.offset_texture)
         std::filesystem::path       sourceDir_;
 
         uint8_t                     chunkUsage;

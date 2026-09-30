@@ -19,12 +19,12 @@ class Chunk {
 	private:
 		// ~~~~~~~~ Structs ~~~~~~~~~
 		IPD_HEADER 			header_;
-		LMData				localLMData_;						// models, materials, ...
+		LMData				internalLMData_;						// models, materials, ...
 		std::vector<IPD_MODEL_INFO>		modelLookupTable_;
 		std::vector<IPD_MODEL_BUFFER>	modelBufferTable_;
 
-		TexturePool			texturePool_;
-		GlobalObjects		globalObjects_;
+		TexturePool&		texturePool_;
+		GlobalObjects&		globalObjects_;
 
 		// ~~~~~~~~ I/O ~~~~~~~~~
 		std::filesystem::path	sourceDir_;
@@ -33,14 +33,14 @@ class Chunk {
 
 		// ~~~~~~~~ Properties ~~~~~~~~~
 		std::string 		prefix_;
-		int8_t 				chunkMajorX,
-							chunkMajorZ;
+		int8_t 				chunkMajorX_,
+							chunkMajorZ_;
 		bool 				loaded,
 							legal;
 
 	public:
-		Chunk(TexturePool& texturePool, GlobalObjects& globalObjects,
-			  const std::filesystem::path& sourceDir, const std::string& filename);
+		Chunk(const std::filesystem::path& sourceDir, const std::string& filename,
+			  TexturePool& texturePool, GlobalObjects& globalObjects);
 		~Chunk();
 
 		int UnpackIPDToMem();
