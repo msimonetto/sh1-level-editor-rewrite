@@ -66,12 +66,12 @@ struct s_FsImageDesc {
     int16_t         clutX, clutY;
 };
 
-// LM_TEXTURE (size: 24 bytes)
+// LM_TEXTURE (size: 24 bytes) -- mainly used at runtime, shouldn't be expanded
 struct LM_TEXTURE {
     s_FsImageDesc   imageDesc;
     u_Filename      name;
     uint32_t        queueIdx;
-    int8_t          refCount;                       // VRAM cache lifetime across shared models/chunks
+    int8_t          refCount;                       // VRAM cache lifetime across shared models/chunks, runtime only (verify)
                                                     // Incremented per chunk/model, decremented until reaching 0 (offloaded)
     uint8_t         __pad[3];
 };
