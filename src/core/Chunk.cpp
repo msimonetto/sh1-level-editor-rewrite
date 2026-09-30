@@ -19,26 +19,22 @@
 #include "structs/LM.h"
 
 // ~~~~~~~~~~~ INITIALISE BLANK CHUNK ~~~~~~~~~~~
-Chunk::Chunk(TexturePool& texturePool, GlobalObjects& globalObjects,
-	         const std::filesystem::path& sourceDir, const std::string& filename) {
+Chunk::Chunk(const std::filesystem::path& sourceDir, const std::string& filename,
+	         TexturePool& texturePool, GlobalObjects& globalObjects)
+		   : texturePool_(texturePool), globalObjects_(globalObjects), loaded(false), legal(true) {
 
-	this->loaded = false; 			// Needs to be loaded into memory via `UnpackIPDToMem()`
-	this->legal  = true;			// `true` until shown not to be legal chunk
-
-	this->texturePool_ 		= texturePool;
-	this->globalObjects_ 	= globalObjects;
+	// `loaded(false)`: needs to be loaded into memory via `UnpackIPDToMem()`
+	//   `legal(true)`: until shown not to be legal chunk
 
 	// Check if specified file exists, case-sensitive!
 	std::filesystem::path fpath = sourceDir / filename;
-	if (std::filesystem::exists(fpath) && fpath.extension().string() == "IPD") {
+	if (std::filesystem::exists(fpath) && fpath.extension().string() == ".IPD") {
 		this->sourceDir_  	= sourceDir;
 		this->filename_ 	= filename;
 		this->file_.path	= fpath;
 
 		std::cout << "[INFO]: Constructed chunk object from path!" << std::endl;
-	}
-	
-	else {
+	} else {
 		std::cerr << "[INFO]: Constructed chunk object but without path! " 
 				  << "Note that file extensions are case-sensitive (.IPD)!" << std::endl;
 		
@@ -54,81 +50,87 @@ Chunk::~Chunk() {
 // ~~~~~~~~~~~ READING IPD FILES ~~~~~~~~~~~
 int Chunk::UnpackIPDToMem() {
 
-	// Open .IPD file
+	// Open IPD file
 	file_.stream.open(file_.path, std::ios::in | std::ios::binary);
 	if (!file_.stream) {
 		std::cerr << "[ERROR]: Failed to open contents of IPD file!" << std::endl;
 		return -1;
 	}
 
-	// Unpack its header and verify its first word (0x14)
+	// Unpack IPD header
 	UnpackToStruct(0, sizeof(IPD_HEADER), header_, file_);
 	if (!(header_.isValid())) {
-		std::cerr << "[ERROR]: Not a valid IPD header, offset (int) = " << (int)(header_.id) << std::endl;
+		std::cerr << "[ERROR]: Not a valid IPD header, value at position 0x00 is (as int) " << (int)(header_.id) << std::endl;
 		return -1;
 	}
 
-	// Unpack into `localLMData_`'s member header
-	UnpackToStruct(this->header_.ptr_LM_HEADER, sizeof(LM_HEADER), localLMData_.header, file_);
+	// Unpack Internal LM header
+	int internalLMBaseOffset	= header_.offset_LM_HEADER;
+	UnpackToStruct(internalLMBaseOffset, sizeof(LM_HEADER), internalLMData_.header, file_);
 
-	// Use `localLMData_`'s header to populate its materials vector and its texture pool
-	// Resize materials (vector of LM_MATERIAL) to materialCount
-	localLMData_.materials.resize(localLMData_.header.materialCount);
+	// Locate first material and the material count
+	int materialBaseOffset 	= internalLMBaseOffset + internalLMData_.header.offset_LM_MATERIAL;
+	int materialCount 		= internalLMData_.header.count_LM_MATERIAL;
+	internalLMData_.materials.resize(materialCount);
 
-	// Load each material iteratively (# = materialCount)
-	for (size_t i = 0; i < localLMData_.header.materialCount; ++i) {
-		auto& material = localLMData_.materials[i];
-
-		// Read from `Base + i * sizeof(LM_MATERIAL)`
+	// Unpack each material
+	for (size_t i = 0; i < materialCount; ++i) {
+		auto& material = internalLMData_.materials[i];
+		
 		UnpackToStruct(
-			localLMData_.header.ptr_materials + i * sizeof(LM_MATERIAL),
+			materialBaseOffset + i * sizeof(LM_MATERIAL),
 			sizeof(LM_MATERIAL),
 			material, file_
 		);
 
 		// // See if the material's texture is contained in texture pool (unordered_map), if not, add it
-		// if (!localLMData_.texturePool.contains(material.ptr_texture.string())) {
+		// if (!internalLMData_.texturePool.contains(material.offset_texture.string())) {
 		// 	LM_TEXTURE uniqueTexture;
 			
 		// 	std::cout << FileManager::Convert6BitFilenameToString(material.name) << std::endl;
 
-		// 	localLMData_.texturePool.insert({material.ptr_texture, uniqueTexture});
+		// 	internalLMData_.texturePool.insert({material.offset_texture, uniqueTexture});
 		// }
 	}
 
-	// Use `localLMData_`'s header to populate its models vector and subsequently its meshes
-	// Resize models (vector of ModelData) to modelCount
-	localLMData_.models.resize(localLMData_.header.modelCount);
-	for (size_t i = 0; i < localLMData_.header.modelCount; ++i) {
-		auto& model = localLMData_.models[i];
+	// Locate first model and the model count
+	int modelBaseOffset = internalLMBaseOffset + internalLMData_.header.offset_LM_MODEL_HEADER;
+	int modelCount 		= internalLMData_.header.count_LM_MODEL_HEADER;
+	internalLMData_.models.resize(modelCount);
 
-		// Read from `Base + i * sizeof(LM_MODEL_HEADER)`
+	// Unpack each model
+	for (size_t i = 0; i < modelCount; ++i) {
+		auto& model = internalLMData_.models[i];
+
 		UnpackToStruct(
-			localLMData_.header.ptr_modelHdrs + i * sizeof(LM_MODEL_HEADER),
+			modelBaseOffset + i * sizeof(LM_MODEL_HEADER),
 			sizeof(LM_MODEL_HEADER),
 			model.header, file_
 		);
 
-		// Resize meshes (vector of MeshData) to meshCount
-		model.meshes.resize(model.header.meshCount);
-		for (size_t j = 0; j < model.header.meshCount; ++j) {
+		// Locate model's first mesh and its mesh count
+		int meshBaseOffset 	= internalLMBaseOffset + model.header.offset_LM_MESH_HEADER;
+		int meshCount		= model.header.meshCount;
+		model.meshes.resize(meshCount);
+
+		// Unpack each mesh
+		for (size_t j = 0; j < meshCount; ++j) {
 			auto& mesh = model.meshes[j];
 
-			// Read single meshes from `Base + j * sizeof(LM_MESH_HEADER)` 
 			UnpackToStruct(
-				model.header.ptr_meshHdrs + j * sizeof(LM_MESH_HEADER),
+				meshBaseOffset + j * sizeof(LM_MESH_HEADER),
 				sizeof(LM_MESH_HEADER),
 				mesh.header, file_
 			);
 
 			const auto& hdr = mesh.header;
 
-			// Unpack lower-level data from each mesh via its header, no further expansion needed
-			UnpackToVector(hdr.ptr_primitives,	hdr.primitiveCount,	mesh.primitives,	file_);
-			UnpackToVector(hdr.ptr_verticesXY,	hdr.vertexCount,	mesh.verticesXY,	file_);
-			UnpackToVector(hdr.ptr_verticesZ,	hdr.vertexCount,	mesh.verticesZ,		file_);
-			UnpackToVector(hdr.ptr_normals,		hdr.normalCount,	mesh.normals,		file_);
-			UnpackToVector(hdr.ptr_shadings,	hdr.shadingCount,	mesh.shadings,		file_);
+			// Locate mesh's primitives, vertices, ... and each of their counts, then unpack
+			UnpackToVector(internalLMBaseOffset + hdr.offset_LM_PRIMITIVE,	hdr.count_LM_PRIMITIVE,	mesh.primitives,	file_);
+			UnpackToVector(internalLMBaseOffset + hdr.offset_VertexXY,		hdr.count_Vertex,		mesh.verticesXY,	file_);
+			UnpackToVector(internalLMBaseOffset + hdr.offset_VertexZ,		hdr.count_Vertex,		mesh.verticesZ,		file_);
+			UnpackToVector(internalLMBaseOffset + hdr.offset_LM_NORMAL,		hdr.count_LM_NORMAL,	mesh.normals,		file_);
+			UnpackToVector(internalLMBaseOffset + hdr.offset_Shading,		hdr.count_Shading,		mesh.shadings,		file_);
 		}
 	}
 
