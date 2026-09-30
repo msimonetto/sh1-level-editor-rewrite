@@ -7,31 +7,19 @@
 // Shared operations between Chunk and GlobalObjects (will be expanded further)
 
 // ~~~~~~~~~~~ READ OPERATIONS ~~~~~~~~~~~
-// Read binary data and write directly to struct (struct)
-template <typename T, typename ptr_T>
-void UnpackToStruct(ptr_T basePointer, size_t length, T& outStruct,
-					std::fstream& streamFile, std::streampos& streamPos) {
 
-	streamPos = basePointer;
-	streamFile.seekg(streamPos, std::ios::beg);
-	streamFile.read(reinterpret_cast<char*>(&outStruct), length);
+// Non-template version
+bool UnpackBinary(uint32_t offset, size_t length, void* output, BinaryFile& file) {
+	file.position = offset;
+	file.stream.seekg(file.position, std::ios::beg);
+	file.stream.read(reinterpret_cast<char*>(output), length);
 
-	if (!(streamFile)) {
-		std::cerr << "[ERROR]: Failed to unpack from offset " << basePointer << std::endl;
+	if (!(file.stream)) {
+		std::cerr << "[ERROR]: Failed to unpack from offset " << offset << std::endl;
+		return false;
 	}
-}
 
-// Read binary data recursively and write directly to each struct in structVector
-template <typename T, typename ptr_T>
-void UnpackToVector(ptr_T basePointer, size_t count, std::vector<T>& structVector,
-					std::fstream& streamFile, std::streampos& streamPos) {
-
-	structVector.resize(count);
-	if (count == 0 || !basePointer) { return; }
-
-	for (size_t i = 0; i < count; ++i) {
-		UnpackToStruct(basePointer + i * sizeof(T), sizeof(T), structVector[i], streamFile, streamPos);
-	}
+	return true;
 }
 
 // ~~~~~~~~~~~ WRITE OPERATIONS ~~~~~~~~~~~
