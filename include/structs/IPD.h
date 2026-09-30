@@ -5,6 +5,7 @@
 #pragma pack(push, 1)
 
 // Adapted from binary template (sh1_model.bt) by Sparagas (https://github.com/Sparagas/Silent-Hill)
+//      Collision header is extended further in its mapping
 
 // ~~~~~~~~~~~~ COLLISION ~~~~~~~~~~~~
 // IPD_COLL_SURFACE (size: 12 bytes)
@@ -35,10 +36,10 @@ struct IPD_COLL_SUBCELL {
     uint8_t         surfaceIdx1;
 };
 
-// IPD_COLL_SUBCELL_RANGE (size: 4 bytes)
+// IPD_COLL_SUBCELL_RANGE (size: 4 bytes) -- lookup table for each subcell
 struct IPD_COLL_SUBCELL_RANGE {
-    int16_t         offset_wallCylinder_indices_start;
-    int16_t         offset_floorSurface_indices_start;
+    int16_t         wallIndex_start;                // Actual enumerated indices (not their positional offsets)
+    int16_t         floorIndex_start;
 };
 
 // IPD_COLL_CYLINDER (size: 10 bytes)
@@ -48,9 +49,7 @@ struct IPD_COLL_CYLINDER {
                                                     //      false = standard obstacle (crate, curb)
                                                     //      true  = infinitely tall obstacle (tree)
     uint16_t        eventTrigger        : 4;        // dynamic enabling/disabling of obstacle
-    uint16_t        unknown             : 3;        // Set as '0' across all IPD files
-                                                    // Hypothesis: cylinder interaction type (search/inspect, vault) but unused in game/decomp?
-    uint16_t        __pad               : 1;
+    uint16_t        __pad               : 4;        // Set as '0' across all IPD files (previously mapped as 3: unknown, 1: __pad)
     SVECTOR3        offset;                         // (vx, vz) -- position on map plane (relative to its center)
                                                     // vy       -- top surface/elevation
     uint16_t        radius;                         // r        -- horizontal radius of cylinder
@@ -65,7 +64,7 @@ struct IPD_COLL_SPLIT_VERTEX {
 struct IPD_COLL_HEADER {
     int32_t         positionX;                      // Chunk world X (Q23.8)
     int32_t         positionZ;                      // Chunk world Z (Q23.8)
-    uint8_t         count_IPD_COLL_SPLIT_VERTEX;    // Missing
+    uint8_t         count_IPD_COLL_SPLIT_VERTEX;    // For inclines?
     uint8_t         count_IPD_COLL_SURFACE;
     uint8_t         count_IPD_COLL_SUBCELL;
     uint8_t         count_IPD_COLL_CYLINDER;
@@ -75,32 +74,34 @@ struct IPD_COLL_HEADER {
                                                     // Wall/obstacle elements, IpdColl_TestWallElement.c (verify)
     uint32_t        offset_IPD_COLL_CYLINDER;       // Adjusted from Sparagas, offset_18 -> offset_cylinderColliders
                                                     // Cylindrical colliders, IpdColl_TestFloorElement.c (street poles, trees, verify)
-    int16_t         subcellSize;                    // This and everything below needs to be verified and improved!
+    int16_t         subcellSize;
     int8_t          count_subcellX;
     int8_t          count_subcellZ;
-    uint32_t        offset_subcellRanges;
-    uint16_t        count_offset_wallCylinder_indices;  // Clarify the wording on these next 4 members
-    uint16_t        count_offset_floorSurface_indices;
-    uint32_t        offset_wallCylinder_indices;
-    uint32_t        offset_floorSurface_indices;
+    uint32_t        offset_IPD_COLL_SUBCELL_RANGE;
+    uint16_t        count_wallIndex;
+    uint16_t        count_floorIndex;
+    uint32_t        offset_wallIndex;               // Each wallIndex ranges from 0 to count_IPD_COLL_SUBCELL + count_IPD_COLL_CYLINDER - 1
+    uint32_t        offset_floorIndex;              // Each floorIndex ranges from 0 to count_COLL_SURFACE - 1
     uint8_t         count_subcellCheck;
     uint8_t         __pad[3];
     uint8_t         subcellCheckIdx[256];
 };
 
-// IPD_MODEL_INSTANCE (size: 36 bytes)
-struct IPD_MODEL_INSTANCE {
-    uint32_t        offset_modelHdr;                   // connects to LM_MODEL_HEADER
-    MATRIX          mat;
-};
-
+// ~~~~~~~~~~~~ LOOKUP TABLE ~~~~~~~~~~~~
 // IPD_MODEL_INFO (size: 16 bytes)
 struct IPD_MODEL_INFO {
     uint8_t         isGlobalPlm;                    // (0) inside IPD, (1) from `*_GLB.PLM`
     int8_t          __pad[3];
     u_Filename      name;							// Asset name within the PLM
 													// 		based purely on prefix? (verify)
-    uint32_t        offset_modelHdr;
+    uint32_t        offset_LM_MODEL_HEADER;
+};
+
+// ~~~~~~~~~~~~ BUFFER ~~~~~~~~~~~~
+// IPD_MODEL_INSTANCE (size: 36 bytes)
+struct IPD_MODEL_INSTANCE {
+    uint32_t        offset_modelHdr;                   // connects to LM_MODEL_HEADER
+    MATRIX          mat;
 };
 
 // IPD_MODEL_BUFFER (size: 24 bytes)
@@ -116,19 +117,13 @@ struct IPD_MODEL_BUFFER {
     int16_t         maxZ;
     uint32_t        offset_modelInstances;
     uint32_t        offset_billboardInstances;         // Unknown in Sparagas: offset_field_10 -> offset_billboardInstances
-    uint32_t        offset_subcellPositions;
+    uint32_t        offset_subcellPositions;        // Shot in the dark, array of DVECTORs
 };
 
 // IPD_SUBCELL_RANGE (size: 2 bytes)
 struct IPD_SUBCELL_RANGE {
     uint8_t         startIndex;
     uint8_t         count;
-};
-
-// IPD_SUBCELL_VISIBILITY_TABLE (size: 52 bytes)
-struct IPD_SUBCELL_VISIBILITY_TABLE {
-    IPD_SUBCELL_RANGE   subcells[5][5];             // 25 subcells
-    uint8_t         __pad[2];
 };
 
 // IPD_SUBCELL_AABB (size: 8 bytes)
@@ -146,18 +141,26 @@ struct IPD_BILLBOARD_INSTANCE {
     int8_t          __pad;
 };
 
+// ~~~~~~~~~~~~ VISIBILITY TABLE ~~~~~~~~~~~~
+// IPD_SUBCELL_VISIBILITY_TABLE (size: 52 bytes)
+struct IPD_SUBCELL_VISIBILITY_TABLE {
+    IPD_SUBCELL_RANGE   subcells[5][5];             // 25 subcells
+    uint8_t         __pad[2];
+};
+
+// ~~~~~~~~~~~~ IPD HEADER ~~~~~~~~~~~~
 // IPD_HEADER (size: 84 bytes w/o collision)
 struct IPD_HEADER {
     uint8_t         id;
     uint8_t         isLoaded;
     int8_t          cellX;
     int8_t          cellZ;
-    uint32_t        offset_LM_HEADER;					// Internally embedded LMs
+    uint32_t        offset_LM_HEADER;               // Internally embedded LMs
     uint8_t         count_LM_MODEL_HEADER;
     uint8_t         modelBufferCount;
     uint8_t         modelOrderCount;
     uint8_t         __pad[9];
-    uint32_t        offset_modelInfos;
+    uint32_t        offset_LM_MODEL_INFO;
     uint32_t        offset_modelBuffers;
     IPD_SUBCELL_VISIBILITY_TABLE    visibilityTable;
     uint32_t        offset_LM_MODEL_ORDER;          // Missing from sh1-level-editor

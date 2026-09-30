@@ -31,7 +31,6 @@ bool UnpackToVector(uint32_t offset, size_t count, std::vector<T>& output, Binar
     return UnpackBinary(offset, count * sizeof(T), output.data(), file);
 }
 
-
 // ~~~ More in-depth routines (likely shared) ~~~
 bool UnpackLMData(LMData& lmData, size_t lmBaseOffset, TexturePool& texturePool, BinaryFile& file);
 
