@@ -7,7 +7,7 @@
 #include <iostream>
 
 #include "core/DataStructs.h"
-#include "core/MemoryOperations.h"
+#include "core/DataOperations.h"
 #include "core/TexturePool.h"
 
 struct BinaryFile {

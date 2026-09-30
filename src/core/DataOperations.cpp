@@ -1,9 +1,10 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include <unordered_map>
 
 #include "core/DataStructs.h"
-#include "core/MemoryOperations.h"
+#include "core/DataOperations.h"
 #include "core/TexturePool.h"
 #include "mgmt/FileManager.h"
 
@@ -42,16 +43,8 @@ bool UnpackLMData(LMData& lmData, size_t lmBaseOffset, TexturePool& texturePool,
 			material, file
 		);
 
-		// std::cout << FileManager::Convert6BitFilenameToString(material.name) << std::endl;
-
-		// // See if the material's texture is contained in texture pool (unordered_map), if not, add it
-		// if (!lmData.texturePool.contains(material.offset_texture.string())) {
-		// 	LM_TEXTURE uniqueTexture;
-			
-		// 	std::cout << FileManager::Convert6BitFilenameToString(material.name) << std::endl;
-
-		// 	lmData.texturePool.insert({material.offset_texture, uniqueTexture});
-		// }
+		// Add unique textures (material.name) to texturePool
+		texturePool.AcquireTexture(material.name.str);
 	}
 
 	// Locate first model and the model count
