@@ -3,6 +3,8 @@
 #include <vector>
 #include <cstdint>
 #include <unordered_map>
+#include <fstream>
+#include <filesystem>
 
 #include "structs/IPD.h"
 #include "structs/LM.h"
@@ -26,4 +28,11 @@ struct LMData {
 	std::vector<LM_MATERIAL>	materials;
 	std::vector<ModelData>		models;
 	// std::vector<ModelOrder>		modelOrder;
+};
+
+struct BinaryFile {
+    std::filesystem::path   path;
+    std::fstream            stream;
+    std::streampos          position;
+    uint8_t                 state = 0;
 };

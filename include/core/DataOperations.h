@@ -10,13 +10,6 @@
 #include "core/DataOperations.h"
 #include "core/TexturePool.h"
 
-struct BinaryFile {
-    std::filesystem::path   path;
-    std::fstream            stream;
-    std::streampos          position;
-    uint8_t                 state = 0;
-};
-
 // ~~~~~~~~~~~ READ OPERATIONS ~~~~~~~~~~~
 
 // ~~~ More primitive steps ~~~
