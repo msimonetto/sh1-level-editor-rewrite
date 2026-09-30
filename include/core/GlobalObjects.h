@@ -5,7 +5,7 @@
 #include <filesystem>
 
 #include "core/DataStructs.h"
-#include "core/MemoryOperations.h"
+#include "core/DataOperations.h"
 #include "core/TexturePool.h"
 
 // Prefix-related cluster of geometry objects (stored in memory)

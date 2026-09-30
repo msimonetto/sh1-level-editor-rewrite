@@ -9,7 +9,7 @@
 
 #include "core/DataStructs.h"
 #include "core/GlobalObjects.h"
-#include "core/MemoryOperations.h"
+#include "core/DataOperations.h"
 #include "core/TexturePool.h"
 #include "structs/IPD.h"
 #include "structs/LM.h"

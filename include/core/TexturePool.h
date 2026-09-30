@@ -8,18 +8,30 @@
 
 #include "structs/LM.h"
 #include "structs/TIM.h"
+#include "structs/Shared.h"
+
+struct TextureData {
+    u_Filename              name;
+    std::filesystem::path   absPath;
+    uint8_t                 palettes = 0;
+    unsigned int            refCount = 0;
+};
 
 class TexturePool {
     private:
-        std::unordered_map<uint32_t, LM_TEXTURE>	texturePool;		// Mapped by file offset (material.offset_texture)
         std::filesystem::path       sourceDir_;
+        std::string                 prefix_;
 
-        uint8_t                     chunkUsage;
+        std::unordered_map<std::string, TextureData>    pool_;
 
     public:
         TexturePool(const std::filesystem::path& sourceDir);
         ~TexturePool();    
     
-    void AddTexture();
-        
+        std::filesystem::path GetAbsolutePath(const std::string& materialName);
+
+        bool IsValidName(const std::string& materialName);
+        bool AcquireTexture(const std::string& materialName);
+        bool ReduceTexture(const std::string& materialName);
+        bool PurgeTexture(const std::string& materialName);
 };
