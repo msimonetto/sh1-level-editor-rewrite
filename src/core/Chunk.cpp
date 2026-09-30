@@ -67,72 +67,9 @@ int Chunk::UnpackIPDToMem() {
 	// Unpack Internal LM header
 	int internalLMBaseOffset	= header_.offset_LM_HEADER;
 	UnpackToStruct(internalLMBaseOffset, sizeof(LM_HEADER), internalLMData_.header, file_);
-
-	// Locate first material and the material count
-	int materialBaseOffset 	= internalLMBaseOffset + internalLMData_.header.offset_LM_MATERIAL;
-	int materialCount 		= internalLMData_.header.count_LM_MATERIAL;
-	internalLMData_.materials.resize(materialCount);
-
-	// Unpack each material
-	for (size_t i = 0; i < materialCount; ++i) {
-		auto& material = internalLMData_.materials[i];
-		
-		UnpackToStruct(
-			materialBaseOffset + i * sizeof(LM_MATERIAL),
-			sizeof(LM_MATERIAL),
-			material, file_
-		);
-
-		// // See if the material's texture is contained in texture pool (unordered_map), if not, add it
-		// if (!internalLMData_.texturePool.contains(material.offset_texture.string())) {
-		// 	LM_TEXTURE uniqueTexture;
-			
-		// 	std::cout << FileManager::Convert6BitFilenameToString(material.name) << std::endl;
-
-		// 	internalLMData_.texturePool.insert({material.offset_texture, uniqueTexture});
-		// }
-	}
-
-	// Locate first model and the model count
-	int modelBaseOffset = internalLMBaseOffset + internalLMData_.header.offset_LM_MODEL_HEADER;
-	int modelCount 		= internalLMData_.header.count_LM_MODEL_HEADER;
-	internalLMData_.models.resize(modelCount);
-
-	// Unpack each model
-	for (size_t i = 0; i < modelCount; ++i) {
-		auto& model = internalLMData_.models[i];
-
-		UnpackToStruct(
-			modelBaseOffset + i * sizeof(LM_MODEL_HEADER),
-			sizeof(LM_MODEL_HEADER),
-			model.header, file_
-		);
-
-		// Locate model's first mesh and its mesh count
-		int meshBaseOffset 	= internalLMBaseOffset + model.header.offset_LM_MESH_HEADER;
-		int meshCount		= model.header.meshCount;
-		model.meshes.resize(meshCount);
-
-		// Unpack each mesh
-		for (size_t j = 0; j < meshCount; ++j) {
-			auto& mesh = model.meshes[j];
-
-			UnpackToStruct(
-				meshBaseOffset + j * sizeof(LM_MESH_HEADER),
-				sizeof(LM_MESH_HEADER),
-				mesh.header, file_
-			);
-
-			const auto& hdr = mesh.header;
-
-			// Locate mesh's primitives, vertices, ... and each of their counts, then unpack
-			UnpackToVector(internalLMBaseOffset + hdr.offset_LM_PRIMITIVE,	hdr.count_LM_PRIMITIVE,	mesh.primitives,	file_);
-			UnpackToVector(internalLMBaseOffset + hdr.offset_VertexXY,		hdr.count_Vertex,		mesh.verticesXY,	file_);
-			UnpackToVector(internalLMBaseOffset + hdr.offset_VertexZ,		hdr.count_Vertex,		mesh.verticesZ,		file_);
-			UnpackToVector(internalLMBaseOffset + hdr.offset_LM_NORMAL,		hdr.count_LM_NORMAL,	mesh.normals,		file_);
-			UnpackToVector(internalLMBaseOffset + hdr.offset_Shading,		hdr.count_Shading,		mesh.shadings,		file_);
-		}
-	}
+	
+	// Unpack Internal LM data
+	UnpackLMData(internalLMData_, internalLMBaseOffset, texturePool_, file_);
 
 	// TODO: Model lookup table
 	// Decide as to how PLMs should be loaded into memory

@@ -6,6 +6,10 @@
 #include <filesystem>
 #include <iostream>
 
+#include "core/DataStructs.h"
+#include "core/MemoryOperations.h"
+#include "core/TexturePool.h"
+
 struct BinaryFile {
     std::filesystem::path   path;
     std::fstream            stream;
@@ -15,6 +19,7 @@ struct BinaryFile {
 
 // ~~~~~~~~~~~ READ OPERATIONS ~~~~~~~~~~~
 
+// ~~~ More primitive steps ~~~
 bool UnpackBinary(uint32_t offset, size_t length, void* output, BinaryFile& file);
 
 // Read binary data and write directly to struct (struct)
@@ -32,5 +37,9 @@ bool UnpackToVector(uint32_t offset, size_t count, std::vector<T>& output, Binar
 
     return UnpackBinary(offset, count * sizeof(T), output.data(), file);
 }
+
+
+// ~~~ More in-depth routines (likely shared) ~~~
+bool UnpackLMData(LMData& lmData, size_t lmBaseOffset, TexturePool& texturePool, BinaryFile& file);
 
 // ~~~~~~~~~~~ WRITE OPERATIONS ~~~~~~~~~~~
