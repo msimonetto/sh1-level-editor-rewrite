@@ -5,7 +5,7 @@
 #pragma pack(push, 1)
 
 // Adapted from binary template (sh1_model.bt) by Sparagas (https://github.com/Sparagas/Silent-Hill)
-//      Collision header is extended further in its mapping
+//      Collision header and scene layout is extended further in its mapping
 
 // ~~~~~~~~~~~~ COLLISION ~~~~~~~~~~~~
 // IPD_COLL_SURFACE (size: 12 bytes)
@@ -23,7 +23,8 @@ struct IPD_COLL_SURFACE {
 };
 
 // IPD_COLL_SUBCELL (size: 10 bytes)
-//      2D line segments that are floor-material boundaries OR solid physical walls 
+//      2D line segments that are floor-material boundaries OR solid physical walls
+//      Needs improvement
 struct IPD_COLL_WALL_LINE {
     int16_t         collLineX           : 14;       // 2D line transform, loaded into GTE R11
     uint16_t        collTriggerUpper    : 2;        // Collision trigger upper section
@@ -88,65 +89,65 @@ struct IPD_COLL_HEADER {
     uint8_t         subcellCheckIdx[256];
 };
 
-// ~~~~~~~~~~~~ LOOKUP TABLE ~~~~~~~~~~~~
-// IPD_MODEL_INFO (size: 16 bytes)
-struct IPD_MODEL_INFO {
-    uint8_t         isGlobalPlm;                    // (0) inside IPD, (1) from `*_GLB.PLM`
-    int8_t          __pad[3];
-    u_Filename      name;							// Asset name within the PLM
-													// 		based purely on prefix? (verify)
-    uint32_t        offset_LM_MODEL_HEADER;
-};
-
 // ~~~~~~~~~~~~ BUFFER ~~~~~~~~~~~~
-// IPD_MODEL_INSTANCE (size: 36 bytes)
-struct IPD_MODEL_INSTANCE {
-    uint32_t        offset_modelHdr;                   // connects to LM_MODEL_HEADER
+// IPD_SCENE_GROUP_INSTANCE (size: 36 bytes) -- see if this one relates to global objects exclusively
+struct IPD_SCENE_GROUP_INSTANCE {
+    uint32_t        offset_LM_MODEL_HEADER;         // connects to LM_MODEL_HEADER
     MATRIX          mat;
 };
 
-// IPD_MODEL_BUFFER (size: 24 bytes)
-struct IPD_MODEL_BUFFER {
-    uint8_t         count_modelInstance;             // modelInstances count
-    uint8_t         count_billboardInstance;         // Unknown in Sparagas: field_1 -> billboardCount
-                                                    //      Streetlamp glows, light source flares
-    uint8_t         count_subcell;
+// IPD_SCENE_GROUP (size: 24 bytes)
+struct IPD_SCENE_GROUP {
+    uint8_t         count_IPD_SCENE_GROUP_INSTANCE;
+    uint8_t         count_IPD_SCENE_BILLBOARD;      // Unknown in Sparagas: field_1 -> billboardCount. Streetlamp glows, light source flares?
+    uint8_t         count_IPD_SCENE_BOUNDING_BOX;
     int8_t          __pad;
     int16_t         minX;
     int16_t         maxX;
     int16_t         minZ;
     int16_t         maxZ;
-    uint32_t        offset_modelInstances;
-    uint32_t        offset_billboardInstances;         // Unknown in Sparagas: offset_field_10 -> offset_billboardInstances
-    uint32_t        offset_subcellPositions;        // Shot in the dark, array of DVECTORs
+    uint32_t        offset_IPD_SCENE_GROUP_INSTANCE;
+    uint32_t        offset_IPD_SCENE_BILLBOARD;
+    uint32_t        offset_IPD_SCENE_BOUNDING_BOX;
 };
 
-// IPD_SUBCELL_RANGE (size: 2 bytes)
-struct IPD_SUBCELL_RANGE {
-    uint8_t         startIndex;
-    uint8_t         count;
-};
-
-// IPD_SUBCELL_AABB (size: 8 bytes)
-struct IPD_SUBCELL_AABB {
+// IPD_SCENE_BOUNDING_BOX (size: 8 bytes)
+struct IPD_SCENE_BOUNDING_BOX {
     int16_t         minX;
     int16_t         maxX;
     int16_t         minZ;
     int16_t         maxZ;
 };
 
-// IPD_BILLBOARD_INSTANCE (size: 8 bytes)
-struct IPD_BILLBOARD_INSTANCE {
+// IPD_SCENE_BILLBOARD (size: 8 bytes)
+struct IPD_SCENE_BILLBOARD {
     SVECTOR3        coords;
     int8_t          type;                           // 0 = lamp/glow, 1 = flare
     int8_t          __pad;
 };
 
 // ~~~~~~~~~~~~ VISIBILITY TABLE ~~~~~~~~~~~~
-// IPD_SUBCELL_VISIBILITY_TABLE (size: 52 bytes)
-struct IPD_SUBCELL_VISIBILITY_TABLE {
-    IPD_SUBCELL_RANGE   subcells[5][5];             // 25 subcells
+// IPD_VISIBILITY_RANGE (size: 2 bytes)
+struct IPD_VISIBILITY_RANGE {
+    uint8_t         startIndex;
+    uint8_t         count;
+};
+
+// IPD_VISIBILITY_TABLE (size: 52 bytes)
+struct IPD_VISIBILITY_TABLE {
+    IPD_VISIBILITY_RANGE   subcells[5][5];             // 25 subcells (differentiate this better in name from the 20x20 collision subcells)
     uint8_t         __pad[2];
+};
+
+// ~~~~~~~~~~~~ MODEL LOOKUP TABLE ~~~~~~~~~~~~
+// IPD_MODEL_INFO (size: 16 bytes)
+struct IPD_MODEL_INFO {
+    uint8_t         isGlobalPlm;                    // (0) inside IPD, (1) from `*_GLB.PLM`, most likely bool and __pad could be extended
+                                                    //      Verify with actual game data
+    int8_t          __pad[3];
+    u_Filename      name;							// Asset name within the PLM
+													// 		based purely on prefix? (verify)
+    uint32_t        offset_LM_MODEL_HEADER;
 };
 
 // ~~~~~~~~~~~~ IPD HEADER ~~~~~~~~~~~~
@@ -154,17 +155,17 @@ struct IPD_SUBCELL_VISIBILITY_TABLE {
 struct IPD_HEADER {
     uint8_t         id;
     uint8_t         isLoaded;
-    int8_t          cellX;
-    int8_t          cellZ;
-    uint32_t        offset_LM_HEADER;               // Internally embedded LMs
-    uint8_t         count_LM_MODEL_HEADER;
-    uint8_t         modelBufferCount;
-    uint8_t         modelOrderCount;
+    int8_t          chunkX;
+    int8_t          chunkZ;
+    uint32_t        offset_LM_HEADER;               // } Internally embedded LM data in IPD
+    uint8_t         count_LM_MODEL_HEADER;          // }
+    uint8_t         count_IPD_SCENE_GROUP;
+    uint8_t         count_LM_MODEL_ORDER;           // MISSING from LM.h
     uint8_t         __pad[9];
-    uint32_t        offset_LM_MODEL_INFO;
-    uint32_t        offset_modelBuffers;
-    IPD_SUBCELL_VISIBILITY_TABLE    visibilityTable;
-    uint32_t        offset_LM_MODEL_ORDER;          // Missing from sh1-level-editor
+    uint32_t        offset_IPD_MODEL_INFO;
+    uint32_t        offset_IPD_SCENE_GROUP;
+    IPD_VISIBILITY_TABLE    visibilityTable;
+    uint32_t        offset_LM_MODEL_ORDER;          // MISSING
 
     bool isValid() const {
         return (id == 0x14);
