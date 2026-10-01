@@ -13,12 +13,12 @@
 struct CollisionData {
     IPD_COLL_HEADER                     header;
 
-    std::vector<SVECTOR3>               splitVertices;
+    std::vector<SVECTOR3>               wallVertices;
     std::vector<IPD_COLL_SURFACE>       surfaces;
-    std::vector<IPD_COLL_SUBCELL>       subcells;
+    std::vector<IPD_COLL_WALL_LINE>     wallLines;
     std::vector<IPD_COLL_CYLINDER>      cylinders;
 
-    std::vector<IPD_COLL_SUBCELL_RANGE> subcellRanges;
+    std::vector<IPD_COLL_SUBCELL_LOOKUP>    subcellLookup;
 
     std::vector<uint8_t>                wallIndices;
     std::vector<uint8_t>                floorIndices;
