@@ -135,7 +135,7 @@ struct IPD_VISIBILITY_RANGE {
 
 // IPD_VISIBILITY_TABLE (size: 52 bytes)
 struct IPD_VISIBILITY_TABLE {
-    IPD_VISIBILITY_RANGE   subcells[5][5];             // 25 subcells (differentiate this better in name from the 20x20 collision subcells)
+    IPD_VISIBILITY_RANGE   subcells[5][5];           // 25 subcells (differentiate this better in name from the 20x20 collision subcells)
     uint8_t         __pad[2];
 };
 
@@ -165,7 +165,7 @@ struct IPD_HEADER {
     uint32_t        offset_IPD_MODEL_INFO;
     uint32_t        offset_IPD_SCENE_GROUP;
     IPD_VISIBILITY_TABLE    visibilityTable;
-    uint32_t        offset_LM_MODEL_ORDER;          // MISSING
+    uint32_t        offset_LM_MODEL_ORDER;          // MISSING from LM.h
 
     bool isValid() const {
         return (id == 0x14);

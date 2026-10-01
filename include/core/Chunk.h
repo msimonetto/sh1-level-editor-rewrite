@@ -15,13 +15,27 @@
 #include "structs/IPD.h"
 #include "structs/LM.h"
 
+// 2048x2048 scene grid of models/lights (per chunk)
+struct SceneGroupData {
+	IPD_SCENE_GROUP							header;
+	std::vector<IPD_SCENE_GROUP_INSTANCE>	instances;
+	std::vector<IPD_SCENE_BILLBOARD>		billboards;
+	std::vector<IPD_SCENE_BOUNDING_BOX>		boundingBoxes;
+};
+
 class Chunk {
 	private:
 		// ~~~~~~~~ Structs ~~~~~~~~~
+		// ~~~ Models ~~~
 		IPD_HEADER 			header_;
-		LMData				internalLMData_;						// models, materials, ...
+		LMData				internalLMData_;
+		
+		// ~~~ Scene ~~~
 		std::vector<IPD_MODEL_INFO>		modelLookupTable_;
-		std::vector<IPD_MODEL_BUFFER>	modelBufferTable_;
+		std::vector<SceneGroupData>		sceneGroups_;
+		std::vector<uint8_t>			renderOrder_;
+
+		// ~~~ Collision ~~~
 		CollisionData		collisionData_;
 
 		TexturePool&		texturePool_;
