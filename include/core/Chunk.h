@@ -18,7 +18,7 @@
 // 2048x2048 scene grid of models/lights (per chunk)
 struct SceneGroupData {
 	IPD_SCENE_GROUP							header;
-	std::vector<IPD_SCENE_GROUP_INSTANCE>	instances;
+	std::vector<IPD_SCENE_GROUP_INSTANCE>	groupInstances;
 	std::vector<IPD_SCENE_BILLBOARD>		billboards;
 	std::vector<IPD_SCENE_BOUNDING_BOX>		boundingBoxes;
 };
@@ -31,6 +31,7 @@ class Chunk {
 		LMData				internalLMData_;
 		
 		// ~~~ Scene ~~~
+		IPD_VISIBILITY_TABLE			visibilityTable_;
 		std::vector<IPD_MODEL_INFO>		modelLookupTable_;
 		std::vector<SceneGroupData>		sceneGroups_;
 		std::vector<uint8_t>			renderOrder_;

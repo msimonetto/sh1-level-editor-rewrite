@@ -10,19 +10,19 @@
 #include "structs/Shared.h"
 
 TexturePool::TexturePool(const std::filesystem::path& sourceDir) : sourceDir_(sourceDir) {
-    std::cout << "[INFO]: Constructed texture pool from path!" << std::endl;
+    // std::cout << "[INFO]: Constructed texture pool from path!" << std::endl;
 }
 
 TexturePool::~TexturePool() {
     for (const auto& [materialName, textureData] : pool_) {
         if (textureData.refCount > 0) {
-            std::cout << "[WARN]: Purging texture " << materialName << " with active count of "
-                      << textureData.refCount << "! Textures were not released earlier." << std::endl;
+            // std::cout << "[WARN]: Purging texture " << materialName << " with active count of "
+            //           << textureData.refCount << "! Textures were not released earlier." << std::endl;
         }
     }
     pool_.clear();
 
-    std::cout << "[INFO]: Destroyed texture pool!" << std::endl;
+    // std::cout << "[INFO]: Destroyed texture pool!" << std::endl;
 }
 
 std::filesystem::path TexturePool::GetAbsolutePath(const std::string& materialName) {
@@ -93,10 +93,10 @@ bool TexturePool::ReduceTexture(const std::string& materialName) {
 bool TexturePool::PurgeTexture(const std::string& materialName) {
     unsigned int refCount = pool_.at(materialName).refCount;
 
-    if (refCount) {
-        std::cerr << "[WARN]: Purging texture " << materialName << " from texture pool with active count of "
-                << pool_.at(materialName).refCount << std::endl;
-    }
+    // if (refCount) {
+    //     std::cerr << "[WARN]: Purging texture " << materialName << " from texture pool with active count of "
+    //             << pool_.at(materialName).refCount << std::endl;
+    // }
 
     pool_.erase(materialName);
     return true;

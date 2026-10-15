@@ -12,16 +12,22 @@
 
 struct CollisionData {
     IPD_COLL_HEADER                     header;
+    int32_t                             positionX;
+    int32_t                             positionZ;
 
-    std::vector<SVECTOR3>               wallVertices;
-    std::vector<IPD_COLL_SURFACE>       surfaces;
-    std::vector<IPD_COLL_WALL_LINE>     wallLines;
-    std::vector<IPD_COLL_CYLINDER>      cylinders;
+    // Uniques
+    std::vector<SVECTOR3>               vertices;               // vertical
+    std::vector<IPD_COLL_SURFACE>       surfaces;               // floor
+    std::vector<IPD_COLL_LINE>          lines;                  // vertical
+    std::vector<IPD_COLL_CYLINDER>      cylinders;              // vertical
 
-    std::vector<IPD_COLL_SUBCELL_LOOKUP>    subcellLookup;
+    // Ordered table of uniques (not attached to subcell yet)
+    std::vector<uint8_t>                verticalIdxPool;
+    std::vector<uint8_t>                floorIdxPool;
 
-    std::vector<uint8_t>                wallIndices;
-    std::vector<uint8_t>                floorIndices;
+    // Members of ordered table per subcell (both verticals and floors)
+    std::vector<IPD_COLL_SUBCELL_LOOKUP>    subcellLookup;      // Maps each subcell in 20x20 grid (+1 member for terminus) to pool value (connected for verticals and floors, not one-to-one)
 };
 
 bool UnpackCollisionData(CollisionData& collisionData, BinaryFile& file);
+bool PackCollisionData(const CollisionData& collisionData, BinaryFile& file);

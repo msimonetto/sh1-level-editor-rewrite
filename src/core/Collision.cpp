@@ -17,34 +17,28 @@
 bool UnpackCollisionData(CollisionData& collisionData, BinaryFile& file) {
     auto& hdr = collisionData.header;
 
-    // File offset persistently at 84 bytes (sizeof(IPD_HEADER))
-    // Unpack (wall) vertices, surfaces, subcells, cylinders
-    UnpackToVector(sizeof(IPD_HEADER) + hdr.offset_IPD_COLL_WALL_VERTEX,    hdr.count_IPD_COLL_WALL_VERTEX, collisionData.wallVertices, file);
-    UnpackToVector(sizeof(IPD_HEADER) + hdr.offset_IPD_COLL_SURFACE,        hdr.count_IPD_COLL_SURFACE,     collisionData.surfaces,     file);
-    UnpackToVector(sizeof(IPD_HEADER) + hdr.offset_IPD_COLL_WALL_LINE,      hdr.count_IPD_COLL_WALL_LINE,   collisionData.wallLines,    file);
-    UnpackToVector(sizeof(IPD_HEADER) + hdr.offset_IPD_COLL_CYLINDER,       hdr.count_IPD_COLL_CYLINDER,    collisionData.cylinders,    file);
+    collisionData.positionX = hdr.positionX;
+    collisionData.positionZ = hdr.positionZ;
 
+    // Base offset for collision data persistently at 84 bytes (sizeof(IPD_HEADER))
     // Unpack subcell lookup table
-    int subcellCount = hdr.count_subcellX * hdr.count_subcellZ;     // May be constant across all chunks? (400), define constant if yes
-    collisionData.subcellLookup.resize(subcellCount + 1);
-    UnpackToVector(sizeof(IPD_HEADER) + hdr.offset_IPD_COLL_SUBCELL_LOOKUP,  subcellCount + 1,       collisionData.subcellLookup, file);
+    const uint16_t subcellCount = hdr.count_subcellX * hdr.count_subcellZ;  // always expect 400, as observed in data
+    UnpackToVector(sizeof(IPD_HEADER) + hdr.offset_IPD_COLL_SUBCELL_LOOKUP,     subcellCount + 1,       collisionData.subcellLookup,    file);
 
-    // Unpack indices of wall vertices
-    collisionData.wallIndices.resize(hdr.count_wallIndex);
-    UnpackToVector(sizeof(IPD_HEADER) + hdr.offset_wallIndex,           hdr.count_wallIndex,            collisionData.wallIndices,  file);
+    // Unpack vertical/floor index pools
+    uint16_t poolSize = std::max(hdr.count_floorIdxPool, hdr.count_verticalIdxPool);
+    UnpackToVector(sizeof(IPD_HEADER) + hdr.offset_floorIdxPool,        hdr.count_floorIdxPool,         collisionData.floorIdxPool,     file);
+    UnpackToVector(sizeof(IPD_HEADER) + hdr.offset_verticalIdxPool,     hdr.count_verticalIdxPool,      collisionData.verticalIdxPool,  file);
 
-    std::cout << (int)(hdr.count_IPD_COLL_WALL_LINE + hdr.count_IPD_COLL_CYLINDER)-1 << std::endl;
-    std::cout << (int)std::ranges::max(collisionData.wallIndices) << std::endl;
-
-    // Unpack indices of floor surfaces
-    collisionData.floorIndices.resize(hdr.count_floorIndex);
-    UnpackToVector(sizeof(IPD_HEADER) + hdr.offset_floorIndex,           hdr.count_floorIndex,          collisionData.floorIndices,  file);
-
-    std::cout << (int)hdr.count_IPD_COLL_SURFACE-1 << std::endl;
-    std::cout << (int)std::ranges::max(collisionData.floorIndices) << std::endl;
-
-    // collisionData.floorIndices.resize(hdr.count_floorIndex);
-    // UnpackToVector(sizeof(IPD_HEADER) + hdr.offset_floorIndex,          hdr.count_floorIndex,          collisionData.floorIndices, file);
+    // Unpack all other constituent parts
+    UnpackToVector(sizeof(IPD_HEADER) + hdr.offset_IPD_COLL_SURFACE,    hdr.count_IPD_COLL_SURFACE,     collisionData.surfaces,         file);
+    UnpackToVector(sizeof(IPD_HEADER) + hdr.offset_IPD_COLL_VERTEX,     hdr.count_IPD_COLL_VERTEX,      collisionData.vertices,         file);
+    UnpackToVector(sizeof(IPD_HEADER) + hdr.offset_IPD_COLL_LINE,       hdr.count_IPD_COLL_LINE,        collisionData.lines,            file);
+    UnpackToVector(sizeof(IPD_HEADER) + hdr.offset_IPD_COLL_CYLINDER,   hdr.count_IPD_COLL_CYLINDER,    collisionData.cylinders,        file);
 
     return true;
+}
+
+bool PackCollisionData(const CollisionData& collisionData, BinaryFile& file) {
+    return false;
 }

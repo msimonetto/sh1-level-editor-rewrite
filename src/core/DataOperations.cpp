@@ -11,7 +11,6 @@
 // Shared operations between Chunk and GlobalObjects (will be expanded further)
 
 // ~~~~~~~~~~~ READ OPERATIONS ~~~~~~~~~~~
-
 // Non-template version
 bool UnpackBinary(uint32_t offset, size_t length, void* output, BinaryFile& file) {
 	file.position = offset;
@@ -26,27 +25,7 @@ bool UnpackBinary(uint32_t offset, size_t length, void* output, BinaryFile& file
 	return true;
 }
 
-bool UnpackLMData(LMData& lmData, size_t lmBaseOffset, TexturePool& texturePool, BinaryFile& file) {
-
-	// Locate first material and the material count
-	int materialBaseOffset 	= lmBaseOffset + lmData.header.offset_LM_MATERIAL;
-	int materialCount 		= lmData.header.count_LM_MATERIAL;
-	lmData.materials.resize(materialCount);
-
-	// Unpack each material
-	for (size_t i = 0; i < materialCount; ++i) {
-		auto& material = lmData.materials[i];
-		
-		UnpackToStruct(
-			materialBaseOffset + i * sizeof(LM_MATERIAL),
-			sizeof(LM_MATERIAL),
-			material, file
-		);
-
-		// Add unique textures (material.name) to texturePool
-		texturePool.AcquireTexture(material.name.str);
-	}
-
+bool UnpackLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& file) {
 	// Locate first model and the model count
 	int modelBaseOffset = lmBaseOffset + lmData.header.offset_LM_MODEL_HEADER;
 	int modelCount 		= lmData.header.count_LM_MODEL_HEADER;
@@ -86,6 +65,29 @@ bool UnpackLMData(LMData& lmData, size_t lmBaseOffset, TexturePool& texturePool,
 			UnpackToVector(lmBaseOffset + hdr.offset_LM_NORMAL,		hdr.count_LM_NORMAL,	mesh.normals,		file);
 			UnpackToVector(lmBaseOffset + hdr.offset_Shading,		hdr.count_Shading,		mesh.shadings,		file);
 		}
+	}
+
+	return true;
+}
+
+bool UnpackLMMaterials(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& file) {
+	// Locate first material and the material count
+	int materialBaseOffset 	= lmBaseOffset + lmData.header.offset_LM_MATERIAL;
+	int materialCount 		= lmData.header.count_LM_MATERIAL;
+	lmData.materials.resize(materialCount);
+
+	// Unpack each material
+	for (size_t i = 0; i < materialCount; ++i) {
+		auto& material = lmData.materials[i];
+		
+		UnpackToStruct(
+			materialBaseOffset + i * sizeof(LM_MATERIAL),
+			sizeof(LM_MATERIAL),
+			material, file
+		);
+
+		// Add unique textures (material.name) to texturePool
+		texturePool.AcquireTexture(material.name.str);
 	}
 
 	return true;
