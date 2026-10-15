@@ -43,9 +43,13 @@ class Chunk {
 		GlobalObjects&		globalObjects_;
 
 		// ~~~~~~~~ I/O ~~~~~~~~~
-		std::filesystem::path	sourceDir_;
 		std::string 		filename_;
-		BinaryFile			file_;
+
+		std::filesystem::path	sourceDir_;
+		BinaryFile			inFile_;
+
+		std::filesystem::path	targetDir_;
+		BinaryFile			outFile_;
 
 		// ~~~~~~~~ Properties ~~~~~~~~~
 		std::string 		prefix_;
@@ -55,12 +59,12 @@ class Chunk {
 							legal;
 
 	public:
-		Chunk(const std::filesystem::path& sourceDir, const std::string& filename,
-			  TexturePool& texturePool, GlobalObjects& globalObjects);
+		Chunk(const std::filesystem::path& sourceDir, const std::filesystem::path& targetDir,
+			  const std::string& filename, TexturePool& texturePool, GlobalObjects& globalObjects);
 		~Chunk();
 
 		bool UnpackChunkToMem();
-		bool PackMemToIPD();
+		bool PackChunkFromMem();
 
 		int GetSizeInPath();
 		int GetSizeInMem();

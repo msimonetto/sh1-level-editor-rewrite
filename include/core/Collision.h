@@ -29,5 +29,5 @@ struct CollisionData {
     std::vector<IPD_COLL_SUBCELL_LOOKUP>    subcellLookup;      // Maps each subcell in 20x20 grid (+1 member for terminus) to pool value (connected for verticals and floors, not one-to-one)
 };
 
-bool UnpackCollisionData(CollisionData& collisionData, BinaryFile& file);
-bool PackCollisionData(const CollisionData& collisionData, BinaryFile& file);
+bool UnpackCollisionData(CollisionData& collisionData, BinaryFile& inFile);
+bool PackCollisionData(const CollisionData& collisionData, BinaryFile& outFile);

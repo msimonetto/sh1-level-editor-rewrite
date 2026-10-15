@@ -13,7 +13,8 @@
 int main() {
     // Specify file (keep to one chunk for now)
     // std::string path = "/mnt/data/Projects/sh1-level-editor-rewrite/data/Game Extracts/BG/THR0000.IPD"; // Linux
-    std::filesystem::path sourceDir = "D:/Projects/sh1-level-editor-rewrite/data/Game Extracts/BG/"; // Windows
+    std::filesystem::path sourceDir = "D:/Projects/sh1-level-editor-rewrite/data/Game Extracts/BG/";
+    std::filesystem::path targetDir = "D:/Projects/sh1-level-editor-rewrite/data/Outputs/BG/";
     std::string filename = "THR0000.IPD";
 
     // Create shared texture pool
@@ -24,10 +25,11 @@ int main() {
     
     // Create chunk (THR0000.IPD)
     // Note: Overloading for major coords (as opposed to filename) will be introduced eventually
-	auto chunk1         = std::make_unique<Chunk>(sourceDir, filename, *texturePool, *globalObjects);
+	auto chunk1         = std::make_unique<Chunk>(sourceDir, targetDir, filename, *texturePool, *globalObjects);
 
     // Load into memory (most work is here currently)
 	chunk1->UnpackChunkToMem();
+    chunk1->PackChunkFromMem();
 
     // Later: Perform some fixed position manipulations
     // Later: Perform some dynamic manipulations

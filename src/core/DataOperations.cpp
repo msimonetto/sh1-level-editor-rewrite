@@ -12,12 +12,12 @@
 
 // ~~~~~~~~~~~ READ OPERATIONS ~~~~~~~~~~~
 // Non-template version
-bool UnpackBinary(uint32_t offset, size_t length, void* output, BinaryFile& file) {
-	file.position = offset;
-	file.stream.seekg(file.position, std::ios::beg);
-	file.stream.read(reinterpret_cast<char*>(output), length);
+bool UnpackBinary(uint32_t offset, size_t length, void* output, BinaryFile& inFile) {
+	inFile.position = offset;
+	inFile.stream.seekg(inFile.position, std::ios::beg);
+	inFile.stream.read(reinterpret_cast<char*>(output), length);
 
-	if (!(file.stream)) {
+	if (!(inFile.stream)) {
 		std::cerr << "[ERROR]: Failed to unpack from offset " << offset << std::endl;
 		return false;
 	}
@@ -25,7 +25,7 @@ bool UnpackBinary(uint32_t offset, size_t length, void* output, BinaryFile& file
 	return true;
 }
 
-bool UnpackLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& file) {
+bool UnpackLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& inFile) {
 	// Locate first model and the model count
 	int modelBaseOffset = lmBaseOffset + lmData.header.offset_LM_MODEL_HEADER;
 	int modelCount 		= lmData.header.count_LM_MODEL_HEADER;
@@ -38,7 +38,7 @@ bool UnpackLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& textureP
 		UnpackToStruct(
 			modelBaseOffset + i * sizeof(LM_MODEL_HEADER),
 			sizeof(LM_MODEL_HEADER),
-			model.header, file
+			model.header, inFile
 		);
 
 		// Locate model's first mesh and its mesh count
@@ -53,24 +53,24 @@ bool UnpackLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& textureP
 			UnpackToStruct(
 				meshBaseOffset + j * sizeof(LM_MESH_HEADER),
 				sizeof(LM_MESH_HEADER),
-				mesh.header, file
+				mesh.header, inFile
 			);
 
 			const auto& hdr = mesh.header;
 
 			// Locate mesh's primitives, vertices, ... and each of their counts, then unpack
-			UnpackToVector(lmBaseOffset + hdr.offset_LM_PRIMITIVE,	hdr.count_LM_PRIMITIVE,	mesh.primitives,	file);
-			UnpackToVector(lmBaseOffset + hdr.offset_VertexXY,		hdr.count_Vertex,		mesh.verticesXY,	file);
-			UnpackToVector(lmBaseOffset + hdr.offset_VertexZ,		hdr.count_Vertex,		mesh.verticesZ,		file);
-			UnpackToVector(lmBaseOffset + hdr.offset_LM_NORMAL,		hdr.count_LM_NORMAL,	mesh.normals,		file);
-			UnpackToVector(lmBaseOffset + hdr.offset_Shading,		hdr.count_Shading,		mesh.shadings,		file);
+			UnpackToVector(lmBaseOffset + hdr.offset_LM_PRIMITIVE,	hdr.count_LM_PRIMITIVE,	mesh.primitives,	inFile);
+			UnpackToVector(lmBaseOffset + hdr.offset_VertexXY,		hdr.count_Vertex,		mesh.verticesXY,	inFile);
+			UnpackToVector(lmBaseOffset + hdr.offset_VertexZ,		hdr.count_Vertex,		mesh.verticesZ,		inFile);
+			UnpackToVector(lmBaseOffset + hdr.offset_LM_NORMAL,		hdr.count_LM_NORMAL,	mesh.normals,		inFile);
+			UnpackToVector(lmBaseOffset + hdr.offset_Shading,		hdr.count_Shading,		mesh.shadings,		inFile);
 		}
 	}
 
 	return true;
 }
 
-bool UnpackLMMaterials(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& file) {
+bool UnpackLMMaterials(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& inFile) {
 	// Locate first material and the material count
 	int materialBaseOffset 	= lmBaseOffset + lmData.header.offset_LM_MATERIAL;
 	int materialCount 		= lmData.header.count_LM_MATERIAL;
@@ -83,7 +83,7 @@ bool UnpackLMMaterials(uint32_t lmBaseOffset, LMData& lmData, TexturePool& textu
 		UnpackToStruct(
 			materialBaseOffset + i * sizeof(LM_MATERIAL),
 			sizeof(LM_MATERIAL),
-			material, file
+			material, inFile
 		);
 
 		// Add unique textures (material.name) to texturePool
@@ -94,4 +94,16 @@ bool UnpackLMMaterials(uint32_t lmBaseOffset, LMData& lmData, TexturePool& textu
 }
 
 // ~~~~~~~~~~~ WRITE OPERATIONS ~~~~~~~~~~~
-// None.
+// Non-template version
+bool PackBinary(uint32_t offset, size_t length, void* input, BinaryFile& outFile) {
+	outFile.position = offset;
+	outFile.stream.seekg(outFile.position, std::ios::beg);
+	outFile.stream.write(reinterpret_cast<char*>(input), length);
+
+	if (!(outFile.stream)) {
+		std::cerr << "[ERROR]: Failed to pack to offset " << offset << std::endl;
+		return false;
+	}
+
+	return true;
+}
