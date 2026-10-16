@@ -19,7 +19,7 @@ struct MeshData {
 };
 
 struct ModelData {
-	LM_MODEL_HEADER				header;
+	LM_MODEL_HEADER				header;	
 	std::vector<MeshData>		meshes;
 };
 

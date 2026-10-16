@@ -16,7 +16,7 @@ struct CollisionData {
     int32_t                             positionZ;
 
     // Uniques
-    std::vector<SVECTOR3>               vertices;               // vertical
+    std::vector<SVECTOR>               vertices;               // vertical
     std::vector<IPD_COLL_SURFACE>       surfaces;               // floor
     std::vector<IPD_COLL_LINE>          lines;                  // vertical
     std::vector<IPD_COLL_CYLINDER>      cylinders;              // vertical
@@ -30,4 +30,4 @@ struct CollisionData {
 };
 
 bool UnpackCollisionData(CollisionData& collisionData, BinaryFile& inFile);
-bool PackCollisionData(const CollisionData& collisionData, BinaryFile& outFile);
+bool PackCollisionData(const CollisionData& collisionData, BinaryFile& file);
