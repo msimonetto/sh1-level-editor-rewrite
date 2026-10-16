@@ -1,5 +1,8 @@
 #include <iostream>
+#include <set>
+#include <utility>
 
+#include "core/Chunk.h"
 #include "mgmt/Workspace.h"
 #include "mgmt/HexOperations.h"
 
@@ -19,16 +22,28 @@ bool Workspace::AddChunk(int8_t x, int8_t z) {
     std::string filename = this->prefix + HexOperations::AsHex(x) + HexOperations::AsHex(z) + ".IPD";
     std::filesystem::path sourcePath = this->sourceDir / filename;
 
+    // Ensures unique XZ coordinates (for fixed prefix)
+    for (const auto& chunkPtr : chunkPool) {
+        if (chunkPtr && chunkPtr->chunkMajorX_ == x && chunkPtr->chunkMajorZ_ == z) {
+            std::cerr << "[WARNING]: Chunk already exists at (" << (int)x << ", " << (int)z << ")!" << std::endl;
+            return false;
+        }
+    }
+
     if (std::filesystem::exists(sourcePath)) {
         this->chunkPool.push_back(
             std::make_unique<Chunk>(
-                this->sourceDir, this->targetDir,
-                filename,
+                this->sourceDir / filename, // inFile
+                this->targetDir / filename, // outFile
                 *this->texturePool, *this->globalObjects
-            ));
+            )
+        );
+
+        // Unpack automatically
+        chunkPool.back()->Chunk::UnpackChunkToMem();
         return true;
     } else {
-        std::cout << "[WARNING]: File " << filename << " does not exist!" << std::endl;
+        std::cout << "[WARNING]: Chunk does not exist with name " << filename << "!" << std::endl;
         return false;
     }
 

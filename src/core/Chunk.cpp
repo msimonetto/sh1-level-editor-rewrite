@@ -14,27 +14,27 @@
 #include "structs/LM.h"
 
 // ~~~~~~~~~~~ INITIALISE BLANK CHUNK ~~~~~~~~~~~
-Chunk::Chunk(const std::filesystem::path& sourceDir, const std::filesystem::path& targetDir,
-			 std::string filename, TexturePool& texturePool, GlobalObjects& globalObjects)
-		   : texturePool_(texturePool), globalObjects_(globalObjects), loaded(false), legal(true) {
+Chunk::Chunk(
+	const std::filesystem::path& inFile,
+	const std::filesystem::path& outFile,
+	TexturePool& texturePool,
+	GlobalObjects& globalObjects)
+	:
+	texturePool_(texturePool),
+	globalObjects_(globalObjects),
+	loaded(false),
+	legal(true) {
 
 	// `loaded(false)`: becomes true when successfully loaded into memory --> `UnpackIPDToMem()`
 	//   `legal(true)`: stays true until shown not to be legal chunk
 
 	// Check if specified file exists, case-sensitive!
-	std::filesystem::path inPath = sourceDir / filename;
-	std::filesystem::path outPath = targetDir / filename;
-	if (std::filesystem::exists(inPath) && inPath.extension().string() == ".IPD") {
-		this->sourceDir_  	= sourceDir;
-		this->filename_ 	= filename;
-		this->inFile_.path	= inPath;
+	if (std::filesystem::exists(inFile) && inFile.extension().string() == ".IPD") {
+		this->inFile_.path	= inFile;
 	
-		if (std::filesystem::exists(targetDir)) {
-			this->targetDir_  	= targetDir;
-			this->outFile_.path	= outPath;
+		if (std::filesystem::exists(outFile)) {
+			this->outFile_.path	= outFile;
 		}
-
-		// std::cout << "[INFO]: Constructed chunk object from path!" << std::endl;
 	} else {
 		std::cerr << "[INFO]: Constructed chunk object but without path! " 
 				  << "Note that file extensions are case-sensitive (.IPD)!" << std::endl;
@@ -43,10 +43,7 @@ Chunk::Chunk(const std::filesystem::path& sourceDir, const std::filesystem::path
 	}
 }
 
-Chunk::~Chunk() {
-	// Need to decrement value in texture pool!
-	// std::cout << "[INFO]: Destroyed chunk object!" << std::endl;
-}
+Chunk::~Chunk() {}
 
 // ~~~~~~~~~~~ READING IPD FILES ~~~~~~~~~~~
 bool Chunk::UnpackChunkToMem() {
@@ -148,10 +145,8 @@ bool Chunk::PackChunkFromMem() {
 }
 
 int Chunk::GetSizeInPath() {
-	std::filesystem::path fpath = sourceDir_ / filename_;
-	
 	std::error_code errorCode;
-	auto size = std::filesystem::file_size(fpath);
+	auto size = std::filesystem::file_size(inFile_.path);
 
 	if (errorCode) {
 		std::cerr << "[ERROR]: " << errorCode.message() << std::endl;

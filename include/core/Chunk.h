@@ -43,24 +43,19 @@ class Chunk {
 		GlobalObjects&		globalObjects_;
 
 		// ~~~~~~~~ I/O ~~~~~~~~~
-		std::string 		filename_;
-
-		std::filesystem::path	sourceDir_;
 		BinaryFile			inFile_;
-
-		std::filesystem::path	targetDir_;
 		BinaryFile			outFile_;
 
 		// ~~~~~~~~ Properties ~~~~~~~~~
-		std::string 		prefix_;
-		int8_t 				chunkMajorX_,
-							chunkMajorZ_;
 		bool 				loaded,
 							legal;
 
 	public:
-		Chunk(const std::filesystem::path& sourceDir, const std::filesystem::path& targetDir,
-			  std::string filename, TexturePool& texturePool, GlobalObjects& globalObjects);
+		int8_t 				chunkMajorX_,
+							chunkMajorZ_;
+
+		Chunk(const std::filesystem::path& inFile, const std::filesystem::path& outFile,
+			  TexturePool& texturePool, GlobalObjects& globalObjects);
 		~Chunk();
 
 		bool UnpackChunkToMem();
