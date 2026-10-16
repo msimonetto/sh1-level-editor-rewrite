@@ -5,6 +5,14 @@ project(sh1-editor VERSION 0.0.0)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+include(FetchContent)
+FetchContent_Declare (
+	nlohmann_json
+	URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+	SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs/json
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
 file(GLOB_RECURSE PROJECT_FILES CONFIGURE_DEPENDS
 	"src/*.cpp"
 	"include/*.h"
@@ -19,4 +27,8 @@ target_sources(${PROJECT_NAME} PRIVATE
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    nlohmann_json::nlohmann_json
 )
