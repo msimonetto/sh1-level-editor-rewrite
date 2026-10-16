@@ -8,28 +8,21 @@
 #include "core/Chunk.h"
 #include "core/GlobalObjects.h"
 #include "core/TexturePool.h"
-#include "mgmt/FileManager.h"
+#include "mgmt/Workspace.h"
 
 int main() {
     // Specify file (keep to one chunk for now)
     // std::string path = "/mnt/data/Projects/sh1-level-editor-rewrite/data/Game Extracts/BG/THR0000.IPD"; // Linux
-    std::filesystem::path sourceDir = "D:/Projects/sh1-level-editor-rewrite/data/Game Extracts/BG/";
-    std::filesystem::path targetDir = "D:/Projects/sh1-level-editor-rewrite/data/Outputs/BG/";
-    std::string filename = "THR0000.IPD";
+    std::filesystem::path baseDir   = "D:/Projects/sh1-level-editor-rewrite/data/";
+    std::filesystem::path sourceDir = baseDir / "Game Extracts/BG/";
+    std::filesystem::path targetDir = baseDir / "Outputs/BG/";
 
-    // Create shared texture pool
-    auto texturePool    = std::make_unique<TexturePool>(sourceDir);
+    auto workspace = std::make_unique<Workspace>(sourceDir, targetDir, "THR");
+    workspace->Workspace::AddChunk(-1, -1);
 
-    // Create prefix-specific global object bank
-    auto globalObjects  = std::make_unique<GlobalObjects>(sourceDir, *texturePool);
-    
-    // Create chunk (THR0000.IPD)
-    // Note: Overloading for major coords (as opposed to filename) will be introduced eventually
-	auto chunk1         = std::make_unique<Chunk>(sourceDir, targetDir, filename, *texturePool, *globalObjects);
-
-    // Load into memory (most work is here currently)
-	chunk1->UnpackChunkToMem();
-    chunk1->PackChunkFromMem();
+    // // Load into memory (most work is here currently)
+	// chunk1->UnpackChunkToMem();
+    // chunk1->PackChunkFromMem();
 
     // Later: Perform some fixed position manipulations
     // Later: Perform some dynamic manipulations

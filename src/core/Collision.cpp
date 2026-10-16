@@ -10,7 +10,7 @@
 #include "core/GlobalObjects.h"
 #include "core/DataOperations.h"
 #include "core/TexturePool.h"
-#include "mgmt/FileManager.h"
+#include "mgmt/FileOperations.h"
 #include "structs/IPD.h"
 #include "structs/LM.h"
 
@@ -39,6 +39,6 @@ bool UnpackCollisionData(CollisionData& collisionData, BinaryFile& inFile) {
     return true;
 }
 
-bool PackCollisionData(const CollisionData& collisionData, BinaryFile& outFile) {
+bool PackCollisionData(const CollisionData& collisionData, BinaryFile& inFile) {
     return false;
 }

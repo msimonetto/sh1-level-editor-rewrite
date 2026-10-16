@@ -12,11 +12,18 @@ struct MATRIX {
     int32_t         t[3];                           // 3D position
 };
 
-// SVECTOR3 (size: 6 bytes)
-struct SVECTOR3 {
+// SVECTOR (size: 6 bytes)
+struct SVECTOR {
     int16_t         vx;
     int16_t         vy;
     int16_t         vz;
+};
+
+// VECTOR (size: 12 bytes)
+struct VECTOR {
+    int32_t         vx;
+    int32_t         vy;
+    int32_t         vz;
 };
 
 // DVECTOR (size: 4 bytes)

@@ -52,7 +52,7 @@ struct IPD_COLL_CYLINDER {
                                                     //      true  = infinitely tall obstacle (tree)
     uint16_t        eventTrigger        : 4;        // dynamic enabling/disabling of obstacle
     uint16_t        __pad               : 4;        // Set as '0' across all IPD files (previously mapped as 3: unknown, 1: __pad)
-    SVECTOR3        center;                         // (vx, vy, vz) -- position on map plane (relative to its center)
+    SVECTOR         center;                         // (vx, vy, vz) -- position on map plane (relative to its center)
     uint16_t        radius;                         // r        -- horizontal radius of cylinder
 };
 
@@ -91,21 +91,6 @@ struct IPD_SCENE_GROUP_INSTANCE {
     MATRIX          mat;
 };
 
-// IPD_SCENE_GROUP (size: 24 bytes), assume contiguous
-struct IPD_SCENE_GROUP {
-    uint8_t         count_IPD_SCENE_GROUP_INSTANCE;
-    uint8_t         count_IPD_SCENE_BILLBOARD;      // Unknown in Sparagas: field_1 -> billboardCount. Streetlamp glows, light source flares?
-    uint8_t         count_IPD_SCENE_BOUNDING_BOX;
-    int8_t          __pad;
-    int16_t         minX;
-    int16_t         maxX;
-    int16_t         minZ;
-    int16_t         maxZ;
-    uint32_t        offset_IPD_SCENE_GROUP_INSTANCE;
-    uint32_t        offset_IPD_SCENE_BILLBOARD;
-    uint32_t        offset_IPD_SCENE_BOUNDING_BOX;
-};
-
 // IPD_SCENE_BOUNDING_BOX (size: 8 bytes)
 struct IPD_SCENE_BOUNDING_BOX {
     int16_t         minX;
@@ -114,9 +99,21 @@ struct IPD_SCENE_BOUNDING_BOX {
     int16_t         maxZ;
 };
 
+// IPD_SCENE_GROUP (size: 24 bytes), assume contiguous
+struct IPD_SCENE_GROUP {
+    uint8_t         count_IPD_SCENE_GROUP_INSTANCE;
+    uint8_t         count_IPD_SCENE_BILLBOARD;      // Unknown in Sparagas: field_1 -> billboardCount. Streetlamp glows, light source flares?
+    uint8_t         count_IPD_SCENE_BOUNDING_BOX;
+    int8_t          __pad;
+    IPD_SCENE_BOUNDING_BOX   groupBoundingBox;
+    uint32_t        offset_IPD_SCENE_GROUP_INSTANCE;
+    uint32_t        offset_IPD_SCENE_BILLBOARD;
+    uint32_t        offset_IPD_SCENE_BOUNDING_BOX;
+};
+
 // IPD_SCENE_BILLBOARD (size: 8 bytes)
 struct IPD_SCENE_BILLBOARD {
-    SVECTOR3        coords;
+    SVECTOR         coords;
     int8_t          type;                           // 0 = lamp/glow, 1 = flare
     int8_t          __pad;
 };

@@ -60,7 +60,7 @@ class Chunk {
 
 	public:
 		Chunk(const std::filesystem::path& sourceDir, const std::filesystem::path& targetDir,
-			  const std::string& filename, TexturePool& texturePool, GlobalObjects& globalObjects);
+			  std::string filename, TexturePool& texturePool, GlobalObjects& globalObjects);
 		~Chunk();
 
 		bool UnpackChunkToMem();

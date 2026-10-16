@@ -6,7 +6,7 @@
 #include "core/DataStructs.h"
 #include "core/DataOperations.h"
 #include "core/TexturePool.h"
-#include "mgmt/FileManager.h"
+#include "mgmt/FileOperations.h"
 
 // Shared operations between Chunk and GlobalObjects (will be expanded further)
 
@@ -40,6 +40,7 @@ bool UnpackLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& textureP
 			sizeof(LM_MODEL_HEADER),
 			model.header, inFile
 		);
+
 
 		// Locate model's first mesh and its mesh count
 		int meshBaseOffset 	= lmBaseOffset + model.header.offset_LM_MESH_HEADER;

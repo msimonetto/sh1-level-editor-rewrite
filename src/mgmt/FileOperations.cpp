@@ -3,7 +3,7 @@
 #include <regex>
 #include <filesystem>
 
-#include "mgmt/FileManager.h"
+#include "mgmt/FileOperations.h"
 #include "structs/Shared.h"
 
 namespace FileManager {

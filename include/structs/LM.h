@@ -49,13 +49,13 @@ struct LM_MESH_HEADER {
 struct LM_MODEL_HEADER {
     u_Filename      name;
     uint8_t         meshCount;
-    uint8_t         u_offset_vertex;                // Why would these be standalone and uint8_t?
-    uint8_t         u_offset_normal;                // Unsure what these do
-    uint8_t         field_B_0       : 1;
-    uint8_t         field_B_1       : 3;            // Unknown in Sparagas, related to func_800571D0
+    uint8_t         offset_vertex;                  // Why would these be standalone and uint8_t?
+    uint8_t         offset_normal;                  // Unsure what these do
+    uint8_t         flag1           : 1;
+    uint8_t         ZSortPriority   : 3;            // Unknown in Sparagas, related to func_800571D0
                                                     // PS1 ordering table 'depth bin', similar to Z-buffer in other engines
-    uint8_t         field_B_4       : 2;            // Lighting mode (0 = unlit/flat, 1 = directional/GTE, 2 = ambient/point -- e.g., flashlight)
-    uint8_t         unk_B_6         : 2;
+    uint8_t         lightingMode    : 1;            // Lighting mode (0 = unlit/flat, 1 = directional/GTE, 2 = ambient/point -- e.g., flashlight)
+    uint8_t         flag2           : 2;
     uint32_t        offset_LM_MESH_HEADER;
 };
 

@@ -9,13 +9,13 @@
 #include "core/GlobalObjects.h"
 #include "core/DataOperations.h"
 #include "core/TexturePool.h"
-#include "mgmt/FileManager.h"
+#include "mgmt/FileOperations.h"
 #include "structs/IPD.h"
 #include "structs/LM.h"
 
 // ~~~~~~~~~~~ INITIALISE BLANK CHUNK ~~~~~~~~~~~
 Chunk::Chunk(const std::filesystem::path& sourceDir, const std::filesystem::path& targetDir,
-			 const std::string& filename, TexturePool& texturePool, GlobalObjects& globalObjects)
+			 std::string filename, TexturePool& texturePool, GlobalObjects& globalObjects)
 		   : texturePool_(texturePool), globalObjects_(globalObjects), loaded(false), legal(true) {
 
 	// `loaded(false)`: becomes true when successfully loaded into memory --> `UnpackIPDToMem()`
@@ -31,7 +31,7 @@ Chunk::Chunk(const std::filesystem::path& sourceDir, const std::filesystem::path
 	
 		if (std::filesystem::exists(targetDir)) {
 			this->targetDir_  	= targetDir;
-			this->outFile_.path	= targetDir / filename;
+			this->outFile_.path	= outPath;
 		}
 
 		// std::cout << "[INFO]: Constructed chunk object from path!" << std::endl;
@@ -126,8 +126,17 @@ bool Chunk::PackChunkFromMem() {
 			return false;
 		}
 
+		// Calculate all necessary offsets for header
+		
+
 		// Pack IPD header
 		outFile_.stream.write("\x14\x00", 2);
+
+		// Chunk major coordinates (XZ)
+		outFile_.stream.write(reinterpret_cast<const char*>(&this->chunkMajorX_), 1);
+		outFile_.stream.write(reinterpret_cast<const char*>(&this->chunkMajorZ_), 1);
+
+		// Calculate offset_LM_HEADER
 
 		outFile_.stream.close();
 		return true;

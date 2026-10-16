@@ -9,9 +9,7 @@
 #include "structs/TIM.h"
 #include "structs/Shared.h"
 
-TexturePool::TexturePool(const std::filesystem::path& sourceDir) : sourceDir_(sourceDir) {
-    // std::cout << "[INFO]: Constructed texture pool from path!" << std::endl;
-}
+TexturePool::TexturePool(const std::filesystem::path& sourceDir) : sourceDir_(sourceDir) {}
 
 TexturePool::~TexturePool() {
     for (const auto& [materialName, textureData] : pool_) {
@@ -21,8 +19,6 @@ TexturePool::~TexturePool() {
         }
     }
     pool_.clear();
-
-    // std::cout << "[INFO]: Destroyed texture pool!" << std::endl;
 }
 
 std::filesystem::path TexturePool::GetAbsolutePath(const std::string& materialName) {
