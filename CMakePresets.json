@@ -25,8 +25,8 @@
     ],
     "buildPresets": [
         {
-            "name": "Debug-Linux",
-            "configurePreset": "Debug-Linux"
+            "name": "Debug-Windows",
+            "configurePreset": "Debug-Windows"
         }
     ]
 }

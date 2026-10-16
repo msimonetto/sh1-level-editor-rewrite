@@ -1,6 +1,9 @@
 #include <iostream>
-#include <set>
-#include <utility>
+#include <unordered_map>
+#include <memory>
+#include <cstdint>
+#include <format>
+#include <filesystem>
 
 #include "core/Chunk.h"
 #include "mgmt/Workspace.h"
@@ -19,32 +22,46 @@ Workspace::Workspace(
 Workspace::~Workspace() {}
 
 bool Workspace::AddChunk(int8_t x, int8_t z) {
-    std::string filename = this->prefix + HexOperations::AsHex(x) + HexOperations::AsHex(z) + ".IPD";
-    std::filesystem::path sourcePath = this->sourceDir / filename;
+    uint16_t hash = ChunkHash(x, z);
 
     // Ensures unique XZ coordinates (for fixed prefix)
-    for (const auto& chunkPtr : chunkPool) {
-        if (chunkPtr && chunkPtr->chunkMajorX_ == x && chunkPtr->chunkMajorZ_ == z) {
-            std::cerr << "[WARNING]: Chunk already exists at (" << (int)x << ", " << (int)z << ")!" << std::endl;
-            return false;
-        }
-    }
-
-    if (std::filesystem::exists(sourcePath)) {
-        this->chunkPool.push_back(
-            std::make_unique<Chunk>(
-                this->sourceDir / filename, // inFile
-                this->targetDir / filename, // outFile
-                *this->texturePool, *this->globalObjects
-            )
-        );
-
-        // Unpack automatically
-        chunkPool.back()->Chunk::UnpackChunkToMem();
-        return true;
-    } else {
-        std::cout << "[WARNING]: Chunk does not exist with name " << filename << "!" << std::endl;
+    if (chunkPool.contains(hash)) {
+        std::cerr << "[WARNING]: Chunk already exists with hash " << (int)hash << std::endl;
         return false;
     }
 
+    std::string filename = std::format("{}{:04X}.IPD", this->prefix, hash);
+    std::filesystem::path sourcePath = this->sourceDir / filename;
+
+    if (std::filesystem::exists(sourcePath)) {
+        auto chunk = std::make_unique<Chunk>(
+            sourcePath,                         // inFile
+            targetDir / filename,               // outFile
+            *texturePool,
+            *globalObjects
+        );
+
+        chunk->UnpackChunkToMem();
+        chunkPool.emplace(hash, std::move(chunk));
+
+        return true;
+    } else {
+        std::cerr << "[WARNING]: Chunk does not exist with filename " << filename << std::endl;
+        return false;
+    }
+}
+
+bool Workspace::RemoveChunk(int8_t x, int8_t z) {
+    return (chunkPool.erase(ChunkHash(x, z)));
+}
+
+bool Workspace::PackChunk(int8_t x, int8_t z) {
+    uint16_t hash = ChunkHash(x, z);
+
+    if (!chunkPool.contains(hash)) {
+        std::cerr << "[WARNING]: Tried to pack chunk with hash " << hash << " but it didn't exist!" << std::endl;
+        return false;
+    }
+
+    return chunkPool.at(hash)->PackChunkFromMem();
 }

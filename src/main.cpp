@@ -10,12 +10,8 @@ int main() {
     std::filesystem::path targetDir = baseDir / "Outputs/BG/";
 
     auto workspace = std::make_unique<Workspace>(sourceDir, targetDir, "THR");
-    workspace->Workspace::AddChunk(-1, -1);
-    workspace->Workspace::AddChunk(0, 0);
-    workspace->Workspace::AddChunk(-1, -1);
-
-    // Later: Perform some fixed position manipulations
-    // Later: Perform some dynamic manipulations
+    workspace->AddChunk(0, 0);
+    workspace->PackChunk(0, 0);
 
     return 0;
 }
