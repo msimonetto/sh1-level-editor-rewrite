@@ -229,6 +229,15 @@ bool Chunk::PackChunkFromMem() {
 		PackLMModels(header_.offset_LM_HEADER, internalLMData_, texturePool_, outFile_);
 		PackLMModelOrder(header_.offset_LM_HEADER, internalLMData_, outFile_);
 
+		// Zero out until alignment to next 2048 byte sector (just how the file table works)
+		outFile_.stream.seekg(0, std::ios::end);
+		uint32_t finalPosition 		= static_cast<uint32_t>(outFile_.stream.tellp());
+		uint32_t alignedPosition 	= (finalPosition + 2047) & ~2047;
+		if (alignedPosition > finalPosition) {
+			std::vector<char> pad(alignedPosition - finalPosition, 0);
+			PackBinary(finalPosition, pad.size(), pad.data(), outFile_);
+		}
+
 		outFile_.stream.close();
 
 		std::cout << "[SUCCESS]: Packed " << inFile_.path << " to IPD!" << std::endl;
