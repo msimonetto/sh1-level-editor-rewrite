@@ -104,16 +104,17 @@ def extract_assets(bin_path, out_dir):
             if entry['dir'] == 'XA':
                 continue
                 
-            next_lba = None
-            for j in range(i + 1, len(entries)):
-                if entries[j]['dir'] != 'XA' and entries[j]['lba'] > entry['lba']:
-                    next_lba = entries[j]['lba']
-                    break
-                    
-            if next_lba:
-                sectors_to_read = next_lba - entry['lba']
+            if entry['size_blocks'] > 0 and entry['ext'] != "":
+                valid_bytes = entry['size_blocks'] * 256
+                sectors_to_read = (valid_bytes + DATA_SIZE - 1) // DATA_SIZE
             else:
-                sectors_to_read = (entry['size_blocks'] * 256 + 2047) // 2048
+                next_lba = None
+                for j in range(i + 1, len(entries)):
+                    if entries[j]['dir'] != 'XA' and entries[j]['lba'] > entry['lba']:
+                        next_lba = entries[j]['lba']
+                        break
+                sectors_to_read = (next_lba - entry['lba']) if next_lba else 0
+                valid_bytes = sectors_to_read * DATA_SIZE
                 
             full_dir = os.path.join(out_dir, entry['dir'])
             os.makedirs(full_dir, exist_ok=True)
@@ -124,10 +125,23 @@ def extract_assets(bin_path, out_dir):
             
             with open(filepath, 'wb') as out_f:
                 f.seek(entry['lba'] * SECTOR_SIZE)
+                bytes_left = valid_bytes
                 for s in range(sectors_to_read):
                     sector_data = f.read(SECTOR_SIZE)
                     payload = sector_data[DATA_OFFSET : DATA_OFFSET + DATA_SIZE]
-                    out_f.write(payload)
+                    
+                    if bytes_left >= DATA_SIZE:
+                        out_f.write(payload)
+                        bytes_left -= DATA_SIZE
+                    elif bytes_left > 0:
+                        out_f.write(payload[:bytes_left])
+                        out_f.write(b'\x00' * (DATA_SIZE - bytes_left))
+                        bytes_left = 0
+                    else:
+                        out_f.write(b'\x00' * DATA_SIZE)
+                        out_f.write(payload[:bytes_left])
+                        out_f.write(b'\x00' * (DATA_SIZE - bytes_left))
+                        bytes_left = 0
                     
             if i % 100 == 0:
                 print(f"Extracted {i}/{len(entries)} files...")
