@@ -53,3 +53,6 @@ bool PackFromVector(uint32_t offset, const std::vector<T>& input, BinaryFile& ou
 
 bool PackLMModels(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile);
 bool PackLMMaterials(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile);
+
+// ~~~~~~~~~~~ MISCELLANEOUS ~~~~~~~~~~~
+uint32_t AlignToDWORD(const uint32_t& offset);

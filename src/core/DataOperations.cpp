@@ -120,3 +120,8 @@ bool PackLMModels(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& text
 bool PackLMMaterials(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& inFile) {
 	return true;
 }
+
+// ~~~~~~~~~~~ MISCELLANEOUS ~~~~~~~~~~~
+uint32_t AlignToDWORD(const uint32_t& offset) {
+	return static_cast<uint32_t>((offset + 3) & ~3);
+}

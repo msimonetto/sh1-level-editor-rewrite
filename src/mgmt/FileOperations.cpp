@@ -6,13 +6,11 @@
 #include "mgmt/FileOperations.h"
 #include "structs/Shared.h"
 
-namespace FileManager {
-
 bool IsSupportedExtension(const std::filesystem::path& path) {
 	// Use regex to match against file extension array
 	std::string regexPattern = R"(\.()";
 	for (size_t i = 0; i < 16; ++i) {
-		regexPattern += FileManager::supportedExtensions[i] + (i < 15 ? "|" : "");
+		regexPattern += supportedExtensions[i] + (i < 15 ? "|" : "");
 	}
 	regexPattern += ")$";
 
@@ -42,6 +40,4 @@ std::string Convert6BitFilenameToString(const u_Filename& filename) {
 	}
 
 	return newFilename;
-}
-
 }

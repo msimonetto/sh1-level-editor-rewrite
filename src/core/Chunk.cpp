@@ -3,6 +3,8 @@
 #include <string>
 #include <filesystem>
 #include <cassert>
+#include <cstring>
+#include <algorithm>
 
 #include "core/Chunk.h"
 #include "core/Collision.h"
@@ -29,6 +31,8 @@ Chunk::Chunk(
 {
 	inFile_.path = inFile;
 	outFile_.path = outFile;
+
+	assert(inFile.stem() == outFile.stem());
 }
 
 Chunk::~Chunk() {}
@@ -50,8 +54,14 @@ bool Chunk::UnpackChunkToMem() {
 			return false;
 		}
 
+		// Ensure filename and chunk major coordinates are congruent
 		this->chunkMajorX_ = header_.chunkX;
 		this->chunkMajorZ_ = header_.chunkZ;
+
+		std::string chunkHash = std::format("{:04X}", ChunkHash(chunkMajorX_, chunkMajorZ_));
+		std::string filenameStem = inFile_.path.stem().string();
+		std::string filenameChunkHash = filenameStem.substr(filenameStem.length() - 4);
+		assert(chunkHash == filenameChunkHash);
 
 		// Unpack internal LM header
 		uint32_t internalLMBaseOffset = header_.offset_LM_HEADER;
@@ -73,7 +83,7 @@ bool Chunk::UnpackChunkToMem() {
 		// Visibility table (stored separately, even though in header)
 		UnpackToStruct(28, sizeof(IPD_VISIBILITY_TABLE), visibilityTable_, inFile_);
 
-		// Unpack scene/model buffer tables
+		// Scene/model buffer tables
 		sceneGroups_.resize(header_.count_IPD_SCENE_GROUP);
 
 		for (size_t i = 0; i < header_.count_IPD_SCENE_GROUP; ++i) {
@@ -86,7 +96,7 @@ bool Chunk::UnpackChunkToMem() {
 			UnpackToVector(hdr.offset_IPD_SCENE_GROUP_INSTANCE, hdr.count_IPD_SCENE_GROUP_INSTANCE, sceneGroups_[i].groupInstances, inFile_);
 		}
 
-		// Unpack collision
+		// Collision
 		// We will untangle this later, keep in its original structure for now
 		UnpackToStruct(sizeof(IPD_HEADER), sizeof(IPD_COLL_HEADER), collisionData_.header, inFile_);
 		UnpackCollision(collisionData_, inFile_);
@@ -103,18 +113,59 @@ bool Chunk::UnpackChunkToMem() {
 	}
 }
 
-bool Chunk::Reconcile() {
-	// Recalculate offsets
-	// Recount sizes (should be within range, checks for acceptable counts/sizes such as uint8_t constraint should be performed elsewhere, or called at the start here)
+// ~~~~~~~~~~~ UPDATING VALUES UPON CHANGE ~~~~~~~~~~~
+bool Chunk::ReconcileCounts() {
+	// Visibility table
+	std::memcpy(header_.visibilityTable.subcells, visibilityTable_.subcells, sizeof(IPD_VISIBILITY_RANGE) * 25);
 
-	// For all headers, used as verification layer but only reasonable to implement once we successfully pack back to IPD
-	// In-place editing may be preferred for small changes, if offsets stay the same, otherwise needs to recalculate all offsets and redo file
+	// Counts
+	header_.count_LM_MODEL_ORDER                    = renderOrder_.size();
+    header_.count_IPD_SCENE_GROUP                   = sceneGroups_.size();
+    for (auto& sceneGroup : sceneGroups_) {
+    	sceneGroup.header.count_IPD_SCENE_GROUP_INSTANCE	= sceneGroup.groupInstances.size();
+    	sceneGroup.header.count_IPD_SCENE_BILLBOARD			= sceneGroup.billboards.size();
+    	sceneGroup.header.count_IPD_SCENE_BOUNDING_BOX 		= sceneGroup.boundingBoxes.size();
+    }
 
-	// uint8_t  modelCount    = modelInfoSize / sizeof(IPD_MODEL_INFO);
-	// header_.offset_IPD_SCENE_GROUP = 392 + 
+    collisionData_.header.count_IPD_COLL_VERTEX     = collisionData_.vertices.size();
+    collisionData_.header.count_IPD_COLL_SURFACE    = collisionData_.surfaces.size();
+    collisionData_.header.count_IPD_COLL_LINE       = collisionData_.lines.size();
+    collisionData_.header.count_IPD_COLL_CYLINDER   = collisionData_.cylinders.size();
+    collisionData_.header.count_verticalIdxPool   	= collisionData_.verticalIdxPool.size();
+    collisionData_.header.count_floorIdxPool   		= collisionData_.floorIdxPool.size();
 
-	// Align to nearest 4 bits for uint32_t alignment
-	uint32_t collisionPayloadOffset = (header_.offset_LM_MODEL_ORDER + renderOrder_.size() + 3) & ~3;
+    internalLMData_.header.count_LM_MODEL_HEADER 	= internalLMData_.models.size();
+	internalLMData_.header.count_LM_MATERIAL		= internalLMData_.materials.size();
+
+	return true;
+}
+
+bool Chunk::ReconcileOffsets() {
+	// Offsets
+	header_.offset_IPD_SCENE_GROUP 							= AlignToDWORD(header_.offset_IPD_MODEL_INFO + sizeof(IPD_MODEL_INFO) * modelLookupTable_.size());
+	uint32_t currentOffset = header_.offset_IPD_SCENE_GROUP;
+
+	for (auto& sceneGroup : sceneGroups_) {
+	    currentOffset = AlignToDWORD(currentOffset);
+	    sceneGroup.header.offset_IPD_SCENE_GROUP_INSTANCE 	= currentOffset;
+	    currentOffset += sceneGroup.groupInstances.size() 	* sizeof(IPD_SCENE_GROUP_INSTANCE);
+
+	    currentOffset = AlignToDWORD(currentOffset);
+	    sceneGroup.header.offset_IPD_SCENE_BILLBOARD 		= currentOffset;
+	    currentOffset += sceneGroup.billboards.size() 		* sizeof(IPD_SCENE_BILLBOARD);
+
+	    currentOffset = AlignToDWORD(currentOffset);
+	    sceneGroup.header.offset_IPD_SCENE_BOUNDING_BOX 	= currentOffset;
+	    currentOffset += sceneGroup.boundingBoxes.size() 	* sizeof(IPD_SCENE_BOUNDING_BOX);
+	}
+
+	sceneGroups_[0].header.offset_IPD_SCENE_GROUP_INSTANCE 	= header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * modelLookupTable_.size();
+
+	uint8_t lastSceneGroupElement = std::max(0, (int)(sceneGroups_.size()-1));
+	header_.offset_LM_MODEL_ORDER 							= sceneGroups_[lastSceneGroupElement].header.offset_IPD_SCENE_BOUNDING_BOX + sizeof(IPD_SCENE_BOUNDING_BOX);
+
+	uint32_t collisionPayloadOffset = AlignToDWORD(header_.offset_LM_MODEL_ORDER + renderOrder_.size());
+	collisionData_.header.offset_IPD_COLL_VERTEX = (uint32_t)(collisionPayloadOffset - sizeof(IPD_HEADER));
 
 	return true;
 }
@@ -149,9 +200,9 @@ bool Chunk::PackChunkFromMem() {
 		// Scene group instances/payload
 		assert(sceneGroups_[0].header.offset_IPD_SCENE_GROUP_INSTANCE == header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * modelLookupTable_.size());
 		for (const auto& sceneGroup : sceneGroups_) {
-			PackFromVector(sceneGroup.header.offset_IPD_SCENE_GROUP_INSTANCE, sceneGroup.groupInstances, outFile_);
-			PackFromVector(sceneGroup.header.offset_IPD_SCENE_BILLBOARD, sceneGroup.billboards, outFile_);
-			PackFromVector(sceneGroup.header.offset_IPD_SCENE_BOUNDING_BOX, sceneGroup.boundingBoxes, outFile_);
+			PackFromVector(sceneGroup.header.offset_IPD_SCENE_GROUP_INSTANCE, 	sceneGroup.groupInstances, 	outFile_);
+			PackFromVector(sceneGroup.header.offset_IPD_SCENE_BILLBOARD, 		sceneGroup.billboards, 		outFile_);
+			PackFromVector(sceneGroup.header.offset_IPD_SCENE_BOUNDING_BOX, 	sceneGroup.boundingBoxes, 	outFile_);
 		}
 
 		// Model order payload
@@ -162,7 +213,7 @@ bool Chunk::PackChunkFromMem() {
 		}
 
 		// Collision data payload (relative to +IPD_COLL_HEADER so increment by 84 bytes)
-		assert((uint32_t)(collisionData_.header.offset_IPD_COLL_VERTEX + sizeof(IPD_HEADER)) == (uint32_t)((header_.offset_LM_MODEL_ORDER + renderOrder_.size() + 3) & ~3));
+		assert((uint32_t)(collisionData_.header.offset_IPD_COLL_VERTEX + sizeof(IPD_HEADER)) == AlignToDWORD(header_.offset_LM_MODEL_ORDER + renderOrder_.size()));
 		PackCollision(collisionData_, outFile_);
 		uint16_t collisionDataSize = collisionData_.header.offset_floorIdxPool - collisionData_.header.offset_IPD_COLL_VERTEX;
 

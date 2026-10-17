@@ -5,8 +5,6 @@
 
 #include "structs/Shared.h"
 
-namespace FileManager {
-
 // Adapted from included `extract.py` from `Vatuu/silent-hill-decomp`
 
 const std::string directories[11] {
@@ -45,5 +43,3 @@ const std::string supportedExtensions[16] = {
 // ~~~~~~~~~~~ Filename operations ~~~~~~~~~~~
 bool IsSupportedExtension(const std::filesystem::path& path);
 std::string Convert6BitFilenameToString(const u_Filename& filename);
-
-}

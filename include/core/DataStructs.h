@@ -15,11 +15,11 @@ struct MeshData {
 	std::vector<DVECTOR> 		verticesXY;
 	std::vector<int16_t>		verticesZ;
 	std::vector<LM_NORMAL>		normals;
-	std::vector<uint8_t>		shadings;		
+	std::vector<uint8_t>		shadings;
 };
 
 struct ModelData {
-	LM_MODEL_HEADER				header;	
+	LM_MODEL_HEADER				header;
 	std::vector<MeshData>		meshes;
 };
 
