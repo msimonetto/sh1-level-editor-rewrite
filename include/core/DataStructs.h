@@ -27,7 +27,7 @@ struct LMData {
 	LM_HEADER					header;
 	std::vector<LM_MATERIAL>	materials;
 	std::vector<ModelData>		models;
-	// std::vector<ModelOrder>		modelOrder;
+	std::vector<uint8_t>		modelOrder;
 };
 
 struct BinaryFile {

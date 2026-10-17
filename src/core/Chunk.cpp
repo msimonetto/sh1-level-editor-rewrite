@@ -71,6 +71,7 @@ bool Chunk::UnpackChunkToMem() {
 		// Internal LM data
 		UnpackLMMaterials(internalLMBaseOffset, internalLMData_, texturePool_, inFile_);
 		UnpackLMModels(internalLMBaseOffset, internalLMData_, texturePool_, inFile_);
+		UnpackLMModelOrder(internalLMBaseOffset, internalLMData_, inFile_);
 
 		// Model lookup tables, contiguous up until first scene/model buffer
 		uint8_t modelLookupCount = (header_.offset_IPD_SCENE_GROUP - header_.offset_IPD_MODEL_INFO) / sizeof(IPD_MODEL_INFO);
@@ -137,6 +138,8 @@ bool Chunk::ReconcileCounts() {
     internalLMData_.header.count_LM_MODEL_HEADER 	= internalLMData_.models.size();
 	internalLMData_.header.count_LM_MATERIAL		= internalLMData_.materials.size();
 
+	// Incomplete
+
 	return true;
 }
 
@@ -164,6 +167,8 @@ bool Chunk::ReconcileOffsets() {
 
 	uint32_t collisionPayloadOffset = AlignToDWORD(header_.offset_LM_MODEL_ORDER + renderOrder_.size());
 	collisionData_.header.offset_IPD_COLL_VERTEX = (uint32_t)(collisionPayloadOffset - sizeof(IPD_HEADER));
+
+	// Incomplete
 
 	return true;
 }
@@ -196,7 +201,7 @@ bool Chunk::PackChunkFromMem() {
 		}
 
 		// Scene group instances/payload
-		assert(sceneGroups_[0].header.offset_IPD_SCENE_GROUP_INSTANCE == header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * modelLookupTable_.size());
+		assert(sceneGroups_[0].header.offset_IPD_SCENE_GROUP_INSTANCE == AlignToDWORD(header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * sceneGroups_.size()));
 		for (const auto& sceneGroup : sceneGroups_) {
 			PackFromVector(sceneGroup.header.offset_IPD_SCENE_GROUP_INSTANCE, 	sceneGroup.groupInstances, 	outFile_);
 			PackFromVector(sceneGroup.header.offset_IPD_SCENE_BILLBOARD, 		sceneGroup.billboards, 		outFile_);
@@ -222,6 +227,7 @@ bool Chunk::PackChunkFromMem() {
 		// Internal LM payload
 		PackLMMaterials(header_.offset_LM_HEADER, internalLMData_, texturePool_, outFile_);
 		PackLMModels(header_.offset_LM_HEADER, internalLMData_, texturePool_, outFile_);
+		PackLMModelOrder(header_.offset_LM_HEADER, internalLMData_, outFile_);
 
 		// Calculate offset_LM_HEADER
 		outFile_.stream.close();

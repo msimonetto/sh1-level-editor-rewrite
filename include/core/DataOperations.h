@@ -31,8 +31,9 @@ bool UnpackToVector(uint32_t offset, size_t count, std::vector<T>& output, Binar
 }
 
 // ~~~ More in-depth routines (likely shared) ~~~
-bool UnpackLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& inFile);
 bool UnpackLMMaterials(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& inFile);
+bool UnpackLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& inFile);
+bool UnpackLMModelOrder(uint32_t lmBaseOffset, LMData& lmData, BinaryFile& inFile);
 
 // ~~~~~~~~~~~ WRITE OPERATIONS ~~~~~~~~~~~
 bool PackBinary(uint32_t offset, size_t length, const void* input, BinaryFile& outFile);
@@ -51,8 +52,9 @@ bool PackFromVector(uint32_t offset, const std::vector<T>& input, BinaryFile& ou
     return PackBinary(offset, input.size() * sizeof(T), input.data(), outFile);
 }
 
-bool PackLMModels(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile);
 bool PackLMMaterials(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile);
+bool PackLMModels(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile);
+bool PackLMModelOrder(uint32_t lmBaseOffset, const LMData& lmData, BinaryFile& outFile);
 
 // ~~~~~~~~~~~ MISCELLANEOUS ~~~~~~~~~~~
 uint32_t AlignToDWORD(const uint32_t& offset);

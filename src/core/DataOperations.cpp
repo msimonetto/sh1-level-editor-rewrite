@@ -1,12 +1,14 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include <numeric>
 #include <unordered_map>
 
 #include "core/DataStructs.h"
 #include "core/DataOperations.h"
 #include "core/TexturePool.h"
 #include "mgmt/FileOperations.h"
+#include "mgmt/HexOperations.h"
 
 // Shared operations between Chunk and GlobalObjects (will be expanded further)
 
@@ -20,6 +22,29 @@ bool UnpackBinary(uint32_t offset, size_t length, void* output, BinaryFile& inFi
 	if (!(inFile.stream)) {
 		std::cerr << "[ERROR]: Failed to unpack from offset " << offset << std::endl;
 		return false;
+	}
+
+	return true;
+}
+
+bool UnpackLMMaterials(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& inFile) {
+	// Locate first material and the material count
+	int materialBaseOffset 	= lmBaseOffset + lmData.header.offset_LM_MATERIAL;
+	int materialCount 		= lmData.header.count_LM_MATERIAL;
+	lmData.materials.resize(materialCount);
+
+	// Unpack each material
+	for (size_t i = 0; i < materialCount; ++i) {
+		auto& material = lmData.materials[i];
+		
+		UnpackToStruct(
+			materialBaseOffset + i * sizeof(LM_MATERIAL),
+			sizeof(LM_MATERIAL),
+			material, inFile
+		);
+
+		// Add unique textures (material.name) to texturePool
+		texturePool.AcquireTexture(material.name.str);
 	}
 
 	return true;
@@ -71,25 +96,11 @@ bool UnpackLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& textureP
 	return true;
 }
 
-bool UnpackLMMaterials(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& inFile) {
-	// Locate first material and the material count
-	int materialBaseOffset 	= lmBaseOffset + lmData.header.offset_LM_MATERIAL;
-	int materialCount 		= lmData.header.count_LM_MATERIAL;
-	lmData.materials.resize(materialCount);
+bool UnpackLMModelOrder(uint32_t lmBaseOffset, LMData& lmData, BinaryFile& inFile) {
+	uint32_t modelOrderBaseOffset = lmBaseOffset + lmData.header.offset_LM_MODEL_ORDER;
+	uint8_t modelOrderCount = lmData.header.count_LM_MODEL_HEADER;
 
-	// Unpack each material
-	for (size_t i = 0; i < materialCount; ++i) {
-		auto& material = lmData.materials[i];
-		
-		UnpackToStruct(
-			materialBaseOffset + i * sizeof(LM_MATERIAL),
-			sizeof(LM_MATERIAL),
-			material, inFile
-		);
-
-		// Add unique textures (material.name) to texturePool
-		texturePool.AcquireTexture(material.name.str);
-	}
+	UnpackToVector(modelOrderBaseOffset, modelOrderCount, lmData.modelOrder, inFile);
 
 	return true;
 }
@@ -109,15 +120,73 @@ bool PackBinary(uint32_t offset, size_t length, const void* input, BinaryFile& o
 	return true;
 }
 
-bool PackLMModels(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& inFile) {
-	// Locate first model and the model count
-	int modelBaseOffset = lmBaseOffset + lmData.header.offset_LM_MODEL_HEADER;
-	int modelCount 		= lmData.header.count_LM_MODEL_HEADER;
+bool PackLMMaterials(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile) {
+	// Locate first material and the material count
+	int materialBaseOffset 	= lmBaseOffset + lmData.header.offset_LM_MATERIAL;
+	int materialCount 		= lmData.header.count_LM_MATERIAL;
+
+	// Pack each material
+	for (size_t i = 0; i < materialCount; ++i) {
+		auto& material = lmData.materials[i];
+		
+		PackBinary(
+			materialBaseOffset + i * sizeof(LM_MATERIAL),
+			sizeof(LM_MATERIAL),
+			&material, outFile
+		);
+	}
 
 	return true;
 }
 
-bool PackLMMaterials(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& inFile) {
+bool PackLMModels(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile) {
+	// Locate first model and the model count (already reconciled)
+	int modelBaseOffset = lmBaseOffset + lmData.header.offset_LM_MODEL_HEADER;
+	int modelCount 		= lmData.header.count_LM_MODEL_HEADER;
+
+	for (uint8_t i = 0; i < modelCount; ++i) {
+		auto& model = lmData.models[i];
+
+		// All LM_MODEL_HEADER structs are contiguous with each other, then payload comes later
+		PackBinary(
+			modelBaseOffset + i * sizeof(LM_MODEL_HEADER),
+			sizeof(LM_MODEL_HEADER),
+			&model.header, outFile
+		);
+
+		// Locate model's first mesh and its mesh count (already reconciled)
+		int meshBaseOffset 	= lmBaseOffset + model.header.offset_LM_MESH_HEADER;
+		int meshCount		= model.header.meshCount;
+
+		for (uint8_t j = 0; j < meshCount; ++j) {
+			auto& mesh = model.meshes[j];
+
+			PackBinary(
+				meshBaseOffset + j * sizeof(LM_MESH_HEADER),
+				sizeof(LM_MESH_HEADER),
+				&mesh.header, outFile
+			);
+
+			const auto& hdr = mesh.header;
+
+			// Locate mesh's primitives, vertices etc then pack
+			PackFromVector(lmBaseOffset + hdr.offset_LM_PRIMITIVE,	mesh.primitives,	outFile);
+			PackFromVector(lmBaseOffset + hdr.offset_VertexXY,		mesh.verticesXY,	outFile);
+			PackFromVector(lmBaseOffset + hdr.offset_VertexZ,		mesh.verticesZ,		outFile);
+			PackFromVector(lmBaseOffset + hdr.offset_LM_NORMAL,		mesh.normals,		outFile);
+			PackFromVector(lmBaseOffset + hdr.offset_Shading,		mesh.shadings,		outFile);
+		}
+	}
+
+	return true;
+}
+
+bool PackLMModelOrder(uint32_t lmBaseOffset, const LMData& lmData, BinaryFile& outFile) {
+	uint32_t modelOrderBaseOffset = lmBaseOffset + lmData.header.offset_LM_MODEL_ORDER;
+	uint8_t modelOrderCount = lmData.header.count_LM_MODEL_HEADER;
+
+	PackFromVector(modelOrderBaseOffset, lmData.modelOrder, outFile);
+
 	return true;
 }
 

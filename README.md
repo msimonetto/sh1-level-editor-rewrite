@@ -10,8 +10,8 @@ This project's C/C++ structs are contained in `include/structs/*.h`, but note th
 
 ## Plan
 The plan for chunk data is as follows (* = current):
-1. (*) Unpack game files into C/C++ data structures, clean up from there
-2. Convert data structures back to original game formats, with the aim of having byte-to-byte equality with originals
+1. (*) Unpack game files into C/C++ data structures
+2. (*) Convert data structures back to original game formats, with the aim of having byte-to-byte equality with originals
 3. Test specific modifications to data structures (e.g., moving geometry, or remapping textures/UVs) to ensure resultant level data is legal and changes are as expected (in conjunction with the prototype and/or PC Port)
 4. Ensure necessary constraints governing the PS1 and game engine are fully considered and implemented for in-memory structs
 5. Build a GUI (w/ ImGui) and renderer (w/ Raylib) for visualisation and manipulation of data structures (improved from the prototype, and guarding around constraints)
