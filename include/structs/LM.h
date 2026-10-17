@@ -45,7 +45,7 @@ struct LM_MESH_HEADER {
     uint32_t        offset_Shading;                 // Collected from unkCount_3
 };
 
-// LM_MODEL_HEADER (size: 16 bytes)
+// LM_MODEL_HEADER (size: 16 bytes), needs verification
 struct LM_MODEL_HEADER {
     u_Filename      name;
     uint8_t         meshCount;
@@ -54,7 +54,7 @@ struct LM_MODEL_HEADER {
     uint8_t         flag1           : 1;
     uint8_t         ZSortPriority   : 3;            // Unknown in Sparagas, related to func_800571D0
                                                     // PS1 ordering table 'depth bin', similar to Z-buffer in other engines
-    uint8_t         lightingMode    : 1;            // Lighting mode (0 = unlit/flat, 1 = directional/GTE, 2 = ambient/point -- e.g., flashlight)
+    uint8_t         lightingMode    : 2;            // Lighting mode (0 = unlit/flat, 1 = directional/GTE, 2 = ambient/point), verify
     uint8_t         flag2           : 2;
     uint32_t        offset_LM_MESH_HEADER;
 };
