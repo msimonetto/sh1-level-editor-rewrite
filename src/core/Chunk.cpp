@@ -91,9 +91,9 @@ bool Chunk::UnpackChunkToMem() {
 			
 			UnpackToStruct(header_.offset_IPD_SCENE_GROUP + i * sizeof(IPD_SCENE_GROUP), sizeof(IPD_SCENE_GROUP), hdr, inFile_);
 			
+			UnpackToVector(hdr.offset_IPD_SCENE_GROUP_INSTANCE, hdr.count_IPD_SCENE_GROUP_INSTANCE, sceneGroups_[i].groupInstances, inFile_);
 			UnpackToVector(hdr.offset_IPD_SCENE_BILLBOARD, 		hdr.count_IPD_SCENE_BILLBOARD, 		sceneGroups_[i].billboards, 	inFile_);
 			UnpackToVector(hdr.offset_IPD_SCENE_BOUNDING_BOX, 	hdr.count_IPD_SCENE_BOUNDING_BOX, 	sceneGroups_[i].boundingBoxes, 	inFile_);
-			UnpackToVector(hdr.offset_IPD_SCENE_GROUP_INSTANCE, hdr.count_IPD_SCENE_GROUP_INSTANCE, sceneGroups_[i].groupInstances, inFile_);
 		}
 
 		// Collision
@@ -143,10 +143,10 @@ bool Chunk::ReconcileCounts() {
 bool Chunk::ReconcileOffsets() {
 	// Offsets
 	header_.offset_IPD_SCENE_GROUP 							= AlignToDWORD(header_.offset_IPD_MODEL_INFO + sizeof(IPD_MODEL_INFO) * modelLookupTable_.size());
-	uint32_t currentOffset = header_.offset_IPD_SCENE_GROUP;
+	uint32_t currentOffset 									= AlignToDWORD(header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * sceneGroups_.size());
 
 	for (auto& sceneGroup : sceneGroups_) {
-	    currentOffset = AlignToDWORD(currentOffset);
+		currentOffset = AlignToDWORD(currentOffset);
 	    sceneGroup.header.offset_IPD_SCENE_GROUP_INSTANCE 	= currentOffset;
 	    currentOffset += sceneGroup.groupInstances.size() 	* sizeof(IPD_SCENE_GROUP_INSTANCE);
 
@@ -159,8 +159,6 @@ bool Chunk::ReconcileOffsets() {
 	    currentOffset += sceneGroup.boundingBoxes.size() 	* sizeof(IPD_SCENE_BOUNDING_BOX);
 	}
 
-	sceneGroups_[0].header.offset_IPD_SCENE_GROUP_INSTANCE 	= header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * modelLookupTable_.size();
-
 	uint8_t lastSceneGroupElement = std::max(0, (int)(sceneGroups_.size()-1));
 	header_.offset_LM_MODEL_ORDER 							= sceneGroups_[lastSceneGroupElement].header.offset_IPD_SCENE_BOUNDING_BOX + sizeof(IPD_SCENE_BOUNDING_BOX);
 
@@ -172,15 +170,15 @@ bool Chunk::ReconcileOffsets() {
 
 bool Chunk::PackChunkFromMem() {
 	if (this->legal) {
+		this->ReconcileCounts();
+		this->ReconcileOffsets();
+
 		outFile_.stream.open(outFile_.path, std::ios::out | std::ios::binary | std::ios::trunc);
 		if (!outFile_.stream) {
 
 			std::cerr << "[WARNING]: Failed to open contents of new IPD file!" << std::endl;
 			return false;
 		}
-
-		// Call recalculation of header/data offsets and sizes
-		// By this point, we require that headers/data are correctly resized (or at least a check is performed to see if necessary)
 
 		// Fixed block starts at 0, 84
 		PackBinary(0, sizeof(IPD_HEADER), &header_, outFile_);											// Header

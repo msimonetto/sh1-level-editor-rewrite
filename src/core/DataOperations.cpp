@@ -112,7 +112,7 @@ bool PackBinary(uint32_t offset, size_t length, const void* input, BinaryFile& o
 bool PackLMModels(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& inFile) {
 	// Locate first model and the model count
 	int modelBaseOffset = lmBaseOffset + lmData.header.offset_LM_MODEL_HEADER;
-	int modelCount 		= lmData.models.size();
+	int modelCount 		= lmData.header.count_LM_MODEL_HEADER;
 
 	return true;
 }
