@@ -50,3 +50,6 @@ bool PackFromVector(uint32_t offset, const std::vector<T>& input, BinaryFile& ou
 
     return PackBinary(offset, input.size() * sizeof(T), input.data(), outFile);
 }
+
+bool PackLMModels(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile);
+bool PackLMMaterials(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile);

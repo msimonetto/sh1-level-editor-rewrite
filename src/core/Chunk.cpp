@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <filesystem>
+#include <cassert>
 
 #include "core/Chunk.h"
 #include "core/Collision.h"
@@ -128,10 +129,7 @@ bool Chunk::PackChunkFromMem() {
 		}
 
 		// Call recalculation of header/data offsets and sizes
-		// By this point, we assume that headers/data are correctly resized (might change by adding new members to in-memory structs / cleaning up)
-
-		// Need to fix padding/alignment! It is all implicit so far.
-		// This is just a rough sketch and seems terrible/prone to breaking actually due to struct interdependence, and in its overall clarity.
+		// By this point, we require that headers/data are correctly resized (or at least a check is performed to see if necessary)
 
 		// Fixed block starts at 0, 84
 		PackBinary(0, sizeof(IPD_HEADER), &header_, outFile_);											// Header
@@ -143,11 +141,13 @@ bool Chunk::PackChunkFromMem() {
 		}
 
 		// Scene group header
+		assert(header_.offset_IPD_SCENE_GROUP == header_.offset_IPD_MODEL_INFO + sizeof(IPD_MODEL_INFO) * modelLookupTable_.size());
 		for (size_t i = 0; i < sceneGroups_.size(); ++i) {
 			PackBinary(header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * i, sizeof(IPD_SCENE_GROUP), &sceneGroups_[i].header, outFile_);
 		}
 
 		// Scene group instances/payload
+		assert(sceneGroups_[0].header.offset_IPD_SCENE_GROUP_INSTANCE == header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * modelLookupTable_.size());
 		for (const auto& sceneGroup : sceneGroups_) {
 			PackFromVector(sceneGroup.header.offset_IPD_SCENE_GROUP_INSTANCE, sceneGroup.groupInstances, outFile_);
 			PackFromVector(sceneGroup.header.offset_IPD_SCENE_BILLBOARD, sceneGroup.billboards, outFile_);
@@ -155,15 +155,24 @@ bool Chunk::PackChunkFromMem() {
 		}
 
 		// Model order payload
+		uint8_t lastSceneGroupElement = std::max(0, (int)(sceneGroups_.size()-1));
+		assert(header_.offset_LM_MODEL_ORDER == sceneGroups_[lastSceneGroupElement].header.offset_IPD_SCENE_BOUNDING_BOX + sizeof(IPD_SCENE_BOUNDING_BOX));
 		for (size_t i = 0; i < renderOrder_.size(); ++i) {
 			PackBinary(header_.offset_LM_MODEL_ORDER + i, 1, &renderOrder_[i], outFile_);
 		}
 
-		// Collision data payload (relative to +IPD_COLL_HEADER so increment by 84 bytes)		
+		// Collision data payload (relative to +IPD_COLL_HEADER so increment by 84 bytes)
+		assert((uint32_t)(collisionData_.header.offset_IPD_COLL_VERTEX + sizeof(IPD_HEADER)) == (uint32_t)((header_.offset_LM_MODEL_ORDER + renderOrder_.size() + 3) & ~3));
 		PackCollision(collisionData_, outFile_);
+		uint16_t collisionDataSize = collisionData_.header.offset_floorIdxPool - collisionData_.header.offset_IPD_COLL_VERTEX;
 
-		// Internal LM header
+		// Internal LM header (allowance for padding from collision data payload)
+		assert(collisionData_.header.offset_IPD_COLL_VERTEX + sizeof(IPD_HEADER) + collisionDataSize <= header_.offset_LM_HEADER);
 		PackBinary(header_.offset_LM_HEADER, sizeof(LM_HEADER), &internalLMData_.header, outFile_);
+
+		// Internal LM payload
+		PackLMMaterials(header_.offset_LM_HEADER, internalLMData_, texturePool_, outFile_);
+		PackLMModels(header_.offset_LM_HEADER, internalLMData_, texturePool_, outFile_);
 
 		// Calculate offset_LM_HEADER
 		outFile_.stream.close();
