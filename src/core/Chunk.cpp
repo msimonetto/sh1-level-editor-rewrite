@@ -127,24 +127,25 @@ bool Chunk::PackChunkFromMem() {
 		// Need to fix padding/alignment! It is all implicit so far.
 		// This is just a rough sketch and seems terrible/prone to breaking actually due to struct interdependence, and in its overall clarity.
 
-		// ~~~~ HEADERS ~~~~
 		// Fixed block starts at 0, 84
-		std::cout << IntToHexBE(static_cast<uint32_t>(0)) << std::endl;
 		PackBinary(0, sizeof(IPD_HEADER), &header_, outFile_);							// Header
-
-		std::cout << IntToHexBE(static_cast<uint32_t>(sizeof(IPD_HEADER))) << std::endl;
 		PackBinary(84, sizeof(IPD_COLL_HEADER), &collisionData_.header, outFile_);		// Collision header
 
 		// Model lookup table w/ fixed block start at 392
-		std::cout << IntToHexBE(header_.offset_IPD_MODEL_INFO) << std::endl;
 		for (size_t i = 0; i < modelLookupTable_.size(); ++i) {
 			PackBinary(392 + sizeof(IPD_MODEL_INFO) * i, sizeof(IPD_MODEL_INFO), &modelLookupTable_[i], outFile_);
 		}
 
 		// Scene group header
-		std::cout << IntToHexBE(header_.offset_IPD_SCENE_GROUP) << std::endl;
 		for (size_t i = 0; i < sceneGroups_.size(); ++i) {
 			PackBinary(header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * i, sizeof(IPD_SCENE_GROUP), &sceneGroups_[i].header, outFile_);
+		}
+
+		// Scene group instances/payload
+		for (const auto& sceneGroup : sceneGroups_) {
+			PackFromVector(sceneGroup.header.offset_IPD_SCENE_GROUP_INSTANCE, sceneGroup.groupInstances, outFile_);
+			PackFromVector(sceneGroup.header.offset_IPD_SCENE_BILLBOARD, sceneGroup.billboards, outFile_);
+			PackFromVector(sceneGroup.header.offset_IPD_SCENE_BOUNDING_BOX, sceneGroup.boundingBoxes, outFile_);
 		}
 
 		// Model order
