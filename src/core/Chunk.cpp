@@ -57,19 +57,19 @@ bool Chunk::UnpackChunkToMem() {
 		
 		UnpackToStruct(internalLMBaseOffset, sizeof(LM_HEADER), internalLMData_.header, inFile_);
 		
-		// Unpack internal LM data
+		// Internal LM data
 		UnpackLMMaterials(internalLMBaseOffset, internalLMData_, texturePool_, inFile_);
 		UnpackLMModels(internalLMBaseOffset, internalLMData_, texturePool_, inFile_);
 
-		// Unpack model lookup tables, contiguous up until first scene/model buffer
+		// Model lookup tables, contiguous up until first scene/model buffer
 		uint8_t modelLookupCount = (header_.offset_IPD_SCENE_GROUP - header_.offset_IPD_MODEL_INFO) / sizeof(IPD_MODEL_INFO);
 		modelLookupTable_.resize(modelLookupCount);
 		UnpackToVector(header_.offset_IPD_MODEL_INFO, modelLookupCount, modelLookupTable_, inFile_);
 
-		// Unpack model render order
+		// Model render order
 		UnpackToVector(header_.offset_LM_MODEL_ORDER, header_.count_LM_MODEL_ORDER, renderOrder_, inFile_);
 
-		// Unpack visibility table
+		// Visibility table (stored separately, even though in header)
 		UnpackToStruct(28, sizeof(IPD_VISIBILITY_TABLE), visibilityTable_, inFile_);
 
 		// Unpack scene/model buffer tables
@@ -88,7 +88,7 @@ bool Chunk::UnpackChunkToMem() {
 		// Unpack collision
 		// We will untangle this later, keep in its original structure for now
 		UnpackToStruct(sizeof(IPD_HEADER), sizeof(IPD_COLL_HEADER), collisionData_.header, inFile_);
-		UnpackCollisionData(collisionData_, inFile_);
+		UnpackCollision(collisionData_, inFile_);
 
 		inFile_.stream.close();
 
@@ -102,12 +102,18 @@ bool Chunk::UnpackChunkToMem() {
 	}
 }
 
-bool Chunk::RecalculateOffsets() {
+bool Chunk::Reconcile() {
+	// Recalculate offsets
+	// Recount sizes (should be within range, checks for acceptable counts/sizes such as uint8_t constraint should be performed elsewhere, or called at the start here)
+
 	// For all headers, used as verification layer but only reasonable to implement once we successfully pack back to IPD
 	// In-place editing may be preferred for small changes, if offsets stay the same, otherwise needs to recalculate all offsets and redo file
 
 	// uint8_t  modelCount    = modelInfoSize / sizeof(IPD_MODEL_INFO);
 	// header_.offset_IPD_SCENE_GROUP = 392 + 
+
+	// Align to nearest 4 bits for uint32_t alignment
+	uint32_t collisionPayloadOffset = (header_.offset_LM_MODEL_ORDER + renderOrder_.size() + 3) & ~3;
 
 	return true;
 }
@@ -128,12 +134,12 @@ bool Chunk::PackChunkFromMem() {
 		// This is just a rough sketch and seems terrible/prone to breaking actually due to struct interdependence, and in its overall clarity.
 
 		// Fixed block starts at 0, 84
-		PackBinary(0, sizeof(IPD_HEADER), &header_, outFile_);							// Header
-		PackBinary(84, sizeof(IPD_COLL_HEADER), &collisionData_.header, outFile_);		// Collision header
+		PackBinary(0, sizeof(IPD_HEADER), &header_, outFile_);											// Header
+		PackBinary(sizeof(IPD_HEADER), sizeof(IPD_COLL_HEADER), &collisionData_.header, outFile_);		// Collision header
 
-		// Model lookup table w/ fixed block start at 392
+		// Model lookup table w/ fixed block start at 392 (sizeof(IPD_HEADER) + sizeof(IPD_COLL_HEADER))
 		for (size_t i = 0; i < modelLookupTable_.size(); ++i) {
-			PackBinary(392 + sizeof(IPD_MODEL_INFO) * i, sizeof(IPD_MODEL_INFO), &modelLookupTable_[i], outFile_);
+			PackBinary(sizeof(IPD_HEADER) + sizeof(IPD_COLL_HEADER) + sizeof(IPD_MODEL_INFO) * i, sizeof(IPD_MODEL_INFO), &modelLookupTable_[i], outFile_);
 		}
 
 		// Scene group header
@@ -148,18 +154,16 @@ bool Chunk::PackChunkFromMem() {
 			PackFromVector(sceneGroup.header.offset_IPD_SCENE_BOUNDING_BOX, sceneGroup.boundingBoxes, outFile_);
 		}
 
-		// Model order
-		std::cout << IntToHexBE(header_.offset_LM_MODEL_ORDER) << std::endl;
+		// Model order payload
 		for (size_t i = 0; i < renderOrder_.size(); ++i) {
 			PackBinary(header_.offset_LM_MODEL_ORDER + i, 1, &renderOrder_[i], outFile_);
 		}
 
-		// Internal LM header
-		std::cout << IntToHexBE(header_.offset_LM_HEADER) << std::endl;
-		uint32_t internalLMBaseOffset = header_.offset_LM_MODEL_ORDER + renderOrder_.size();
-		PackBinary(internalLMBaseOffset, sizeof(LM_HEADER), &internalLMData_.header, outFile_);
+		// Collision data payload (relative to +IPD_COLL_HEADER so increment by 84 bytes)		
+		PackCollision(collisionData_, outFile_);
 
-		// ~~~~ PAYLOADS ~~~~ (coming later)		
+		// Internal LM header
+		PackBinary(header_.offset_LM_HEADER, sizeof(LM_HEADER), &internalLMData_.header, outFile_);
 
 		// Calculate offset_LM_HEADER
 		outFile_.stream.close();
