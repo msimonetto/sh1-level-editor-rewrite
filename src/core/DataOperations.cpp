@@ -96,10 +96,10 @@ bool UnpackLMMaterials(uint32_t lmBaseOffset, LMData& lmData, TexturePool& textu
 
 // ~~~~~~~~~~~ WRITE OPERATIONS ~~~~~~~~~~~
 // Non-template version
-bool PackBinary(uint32_t offset, size_t length, void* input, BinaryFile& outFile) {
+bool PackBinary(uint32_t offset, size_t length, const void* input, BinaryFile& outFile) {
 	outFile.position = offset;
 	outFile.stream.seekg(outFile.position, std::ios::beg);
-	outFile.stream.write(reinterpret_cast<char*>(input), length);
+	outFile.stream.write(reinterpret_cast<const char*>(input), length);
 
 	if (!(outFile.stream)) {
 		std::cerr << "[ERROR]: Failed to pack to offset " << offset << std::endl;
