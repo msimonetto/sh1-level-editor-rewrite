@@ -14,10 +14,19 @@ Workspace::Workspace(
     const std::filesystem::path& targetDir,
     const std::string& prefix)
     :
-    sourceDir(sourceDir), targetDir(targetDir), prefix(prefix),
-    texturePool(std::make_unique<TexturePool>(sourceDir)),
-    globalObjects(std::make_unique<GlobalObjects>(sourceDir, *texturePool))
-{}
+    sourceDir(sourceDir), targetDir(targetDir), prefix(prefix)
+{
+    if (!std::filesystem::exists(sourceDir) || !std::filesystem::is_directory(sourceDir)) {
+        throw std::invalid_argument("[WARNING]: Source directory did not exist.");
+    }
+
+    if (!std::filesystem::exists(targetDir) || !std::filesystem::is_directory(targetDir)) {
+        throw std::invalid_argument("[WARNING]: Target directory did not exist.");
+    }
+
+    texturePool = std::make_unique<TexturePool>(sourceDir);
+    globalObjects = std::make_unique<GlobalObjects>(sourceDir, *texturePool);
+}
 
 Workspace::~Workspace() {}
 
@@ -59,7 +68,7 @@ bool Workspace::PackChunk(int8_t x, int8_t z) {
     uint16_t hash = ChunkHash(x, z);
 
     if (!chunkPool.contains(hash)) {
-        std::cerr << "[WARNING]: Tried to pack chunk with hash " << hash << " but it didn't exist!" << std::endl;
+        std::cerr << "[WARNING]: Tried to pack chunk with hash " << hash << " but it didn't exist." << std::endl;
         return false;
     }
 

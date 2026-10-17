@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
+#include <cstdlib>
 
 #include "core/DataStructs.h"
 #include "core/DataOperations.h"

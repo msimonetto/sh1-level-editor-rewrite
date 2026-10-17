@@ -59,6 +59,7 @@ class Chunk {
 		~Chunk();
 
 		bool UnpackChunkToMem();
+		bool RecalculateOffsets();
 		bool PackChunkFromMem();
 
 		int GetSizeInPath();

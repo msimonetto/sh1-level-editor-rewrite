@@ -10,6 +10,7 @@
 #include "core/DataOperations.h"
 #include "core/TexturePool.h"
 #include "mgmt/FileOperations.h"
+#include "mgmt/HexOperations.h"
 #include "structs/IPD.h"
 #include "structs/LM.h"
 
@@ -23,24 +24,10 @@ Chunk::Chunk(
 	texturePool_(texturePool),
 	globalObjects_(globalObjects),
 	loaded(false),
-	legal(true) {
-
-	// `loaded(false)`: becomes true when successfully loaded into memory --> `UnpackIPDToMem()`
-	//   `legal(true)`: stays true until shown not to be legal chunk
-
-	// Check if specified file exists, case-sensitive!
-	if (std::filesystem::exists(inFile) && inFile.extension().string() == ".IPD") {
-		this->inFile_.path	= inFile;
-	
-		if (std::filesystem::exists(outFile)) {
-			this->outFile_.path	= outFile;
-		}
-	} else {
-		std::cerr << "[INFO]: Constructed chunk object but without path! " 
-				  << "Note that file extensions are case-sensitive (.IPD)!" << std::endl;
-		
-		this->legal = false;
-	}
+	legal(true)
+{
+	inFile_.path = inFile;
+	outFile_.path = outFile;
 }
 
 Chunk::~Chunk() {}
@@ -67,17 +54,17 @@ bool Chunk::UnpackChunkToMem() {
 
 		// Unpack internal LM header
 		uint32_t internalLMBaseOffset = header_.offset_LM_HEADER;
+		
 		UnpackToStruct(internalLMBaseOffset, sizeof(LM_HEADER), internalLMData_.header, inFile_);
 		
 		// Unpack internal LM data
 		UnpackLMMaterials(internalLMBaseOffset, internalLMData_, texturePool_, inFile_);
 		UnpackLMModels(internalLMBaseOffset, internalLMData_, texturePool_, inFile_);
 
-		// Assume: Only one PLM file is used across a prefix group
 		// Unpack model lookup tables, contiguous up until first scene/model buffer
-		uint8_t fullModelCount = (header_.offset_IPD_SCENE_GROUP - header_.offset_IPD_MODEL_INFO) / sizeof(IPD_MODEL_INFO);
-		modelLookupTable_.resize(fullModelCount);
-		UnpackToVector(header_.offset_IPD_MODEL_INFO, fullModelCount, modelLookupTable_, inFile_);
+		uint8_t modelLookupCount = (header_.offset_IPD_SCENE_GROUP - header_.offset_IPD_MODEL_INFO) / sizeof(IPD_MODEL_INFO);
+		modelLookupTable_.resize(modelLookupCount);
+		UnpackToVector(header_.offset_IPD_MODEL_INFO, modelLookupCount, modelLookupTable_, inFile_);
 
 		// Unpack model render order
 		UnpackToVector(header_.offset_LM_MODEL_ORDER, header_.count_LM_MODEL_ORDER, renderOrder_, inFile_);
@@ -110,31 +97,70 @@ bool Chunk::UnpackChunkToMem() {
 
 		return true;
 	} else {
-		std::cout << "Fix existing integrity issues before unpacking!" << std::endl;
+		std::cout << "[WARNING]: Fix existing integrity issues before unpacking!" << std::endl;
 		return false;
 	}
+}
+
+bool Chunk::RecalculateOffsets() {
+	// For all headers, used as verification layer but only reasonable to implement once we successfully pack back to IPD
+	// In-place editing may be preferred for small changes, if offsets stay the same, otherwise needs to recalculate all offsets and redo file
+
+	// uint8_t  modelCount    = modelInfoSize / sizeof(IPD_MODEL_INFO);
+	// header_.offset_IPD_SCENE_GROUP = 392 + 
+
+	return true;
 }
 
 bool Chunk::PackChunkFromMem() {
 	if (this->legal) {
 		outFile_.stream.open(outFile_.path, std::ios::out | std::ios::binary | std::ios::trunc);
 		if (!outFile_.stream) {
-			std::cerr << "[ERROR]: Failed to open contents of new IPD file!" << std::endl;
+
+			std::cerr << "[WARNING]: Failed to open contents of new IPD file!" << std::endl;
 			return false;
 		}
 
-		// Calculate all necessary offsets for header
-		
+		// Call recalculation of header/data offsets and sizes
+		// By this point, we assume that headers/data are correctly resized (might change by adding new members to in-memory structs / cleaning up)
 
-		// Pack IPD header
-		outFile_.stream.write("\x14\x00", 2);
+		// Need to fix padding/alignment! It is all implicit so far.
+		// This is just a rough sketch and seems terrible/prone to breaking actually due to struct interdependence, and in its overall clarity.
 
-		// Chunk major coordinates (XZ)
-		outFile_.stream.write(reinterpret_cast<const char*>(&this->chunkMajorX_), 1);
-		outFile_.stream.write(reinterpret_cast<const char*>(&this->chunkMajorZ_), 1);
+		// ~~~~ HEADERS ~~~~
+		// Fixed block starts at 0, 84
+		std::cout << IntToHexBE(static_cast<uint32_t>(0)) << std::endl;
+		PackBinary(0, sizeof(IPD_HEADER), &header_, outFile_);							// Header
+
+		std::cout << IntToHexBE(static_cast<uint32_t>(sizeof(IPD_HEADER))) << std::endl;
+		PackBinary(84, sizeof(IPD_COLL_HEADER), &collisionData_.header, outFile_);		// Collision header
+
+		// Model lookup table w/ fixed block start at 392
+		std::cout << IntToHexBE(header_.offset_IPD_MODEL_INFO) << std::endl;
+		for (size_t i = 0; i < modelLookupTable_.size(); ++i) {
+			PackBinary(392 + sizeof(IPD_MODEL_INFO) * i, sizeof(IPD_MODEL_INFO), &modelLookupTable_[i], outFile_);
+		}
+
+		// Scene group header
+		std::cout << IntToHexBE(header_.offset_IPD_SCENE_GROUP) << std::endl;
+		for (size_t i = 0; i < sceneGroups_.size(); ++i) {
+			PackBinary(header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * i, sizeof(IPD_SCENE_GROUP), &sceneGroups_[i].header, outFile_);
+		}
+
+		// Model order
+		std::cout << IntToHexBE(header_.offset_LM_MODEL_ORDER) << std::endl;
+		for (size_t i = 0; i < renderOrder_.size(); ++i) {
+			PackBinary(header_.offset_LM_MODEL_ORDER + i, 1, &renderOrder_[i], outFile_);
+		}
+
+		// Internal LM header
+		std::cout << IntToHexBE(header_.offset_LM_HEADER) << std::endl;
+		uint32_t internalLMBaseOffset = header_.offset_LM_MODEL_ORDER + renderOrder_.size();
+		PackBinary(internalLMBaseOffset, sizeof(LM_HEADER), &internalLMData_.header, outFile_);
+
+		// ~~~~ PAYLOADS ~~~~ (coming later)		
 
 		// Calculate offset_LM_HEADER
-
 		outFile_.stream.close();
 		return true;
 
@@ -154,11 +180,6 @@ int Chunk::GetSizeInPath() {
 	}
 
 	return static_cast<int>(size);
-}
-
-int Chunk::GetSizeInMem() {
-	// Comes later
-	return false;
 }
 
 bool Chunk::IsValid() {
