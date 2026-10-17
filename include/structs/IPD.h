@@ -79,9 +79,9 @@ struct IPD_COLL_HEADER {
     uint16_t        count_floorIdxPool;
     uint32_t        offset_verticalIdxPool;         // Each wallIndex ranges from 0 to count_IPD_COLL_WALL_LINE + count_IPD_COLL_CYLINDER - 1
     uint32_t        offset_floorIdxPool;            // Each floorIndex ranges from 0 to count_IPD_COLL_SURFACE - 1
-    uint8_t         runtimeCounter1;                // Always stored as 0
-    uint8_t         __pad[3];                       // Always stored as 0
-    uint8_t         runtimeCounter2[256];           // Always stored as 0
+    uint8_t         runtimeCounter1;                // } Always stored as 0
+    uint8_t         __pad[3];                       // }
+    uint8_t         runtimeCounter2[256];           // }
 };
 
 // ~~~~~~~~~~~~ BUFFER ~~~~~~~~~~~~
