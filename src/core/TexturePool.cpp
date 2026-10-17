@@ -26,15 +26,15 @@ std::filesystem::path TexturePool::GetAbsolutePath(const std::string& materialNa
 }
 
 bool TexturePool::IsValidName(const std::string& materialName) {
-    if (!(materialName.size() == 8)) {
-        std::cerr << "[ERROR]: Material name is not 8 characters long!" << std::endl;
-        return false;
-    }
-
-    if (!(materialName.back() == 'F' || materialName.back() == 'H')) {
-        std::cerr << "[ERROR]: Material name needs to end in 'F' (256x256) or 'H' (128x256)!" << std::endl;
-        return false;
-    }
+    // if (!(materialName.size() == 8)) {
+    //     std::cerr << "[ERROR]: Material name is not 8 characters long!" << std::endl;
+    //     return false;
+    // }
+    //
+    // if (!(materialName.back() == 'F' || materialName.back() == 'H')) {
+    //     std::cerr << "[ERROR]: Material name needs to end in 'F' (256x256) or 'H' (128x256)!" << std::endl;
+    //     return false;
+    // }
 
     if (!(materialName.contains(prefix_))) {
         std::cerr << "[ERROR]: Material does not contain correct prefix name! It should be " << prefix_ << std::endl;

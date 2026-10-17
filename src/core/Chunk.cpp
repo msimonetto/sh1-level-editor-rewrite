@@ -98,14 +98,14 @@ bool Chunk::UnpackChunkToMem() {
 		}
 
 		// Collision
-		// We will untangle this later, keep in its original structure for now
+		// We will untangle this further later, keep in its original structure for now
 		UnpackToStruct(sizeof(IPD_HEADER), sizeof(IPD_COLL_HEADER), collisionData_.header, inFile_);
 		UnpackCollision(collisionData_, inFile_);
 
 		inFile_.stream.close();
 
 		this->loaded = true;
-		std::cout << "Successfully unpacked " << inFile_.path << std::endl;
+		std::cout << "[SUCCESS]: Unpacked " << inFile_.path << " to memory!" << std::endl;
 
 		return true;
 	} else {
@@ -229,8 +229,9 @@ bool Chunk::PackChunkFromMem() {
 		PackLMModels(header_.offset_LM_HEADER, internalLMData_, texturePool_, outFile_);
 		PackLMModelOrder(header_.offset_LM_HEADER, internalLMData_, outFile_);
 
-		// Calculate offset_LM_HEADER
 		outFile_.stream.close();
+
+		std::cout << "[SUCCESS]: Packed " << inFile_.path << " to IPD!" << std::endl;
 		return true;
 
 	} else {
