@@ -6,15 +6,16 @@
 #include <filesystem>
 
 #include "core/Chunk.h"
+#include "core/FileTable.h"
 #include "mgmt/Workspace.h"
 #include "mgmt/HexOperations.h"
+#include "mgmt/FileOperations.h"
 
 Workspace::Workspace(
-    const std::filesystem::path& sourceDir,
-    const std::filesystem::path& targetDir,
+    const std::filesystem::path& dir,
     const std::string& prefix)
     :
-    sourceDir(sourceDir), targetDir(targetDir), prefix(prefix)
+    sourceDir(dir / "Game Extracts"), targetDir(dir / "Outputs"), prefix(prefix)
 {
     if (!std::filesystem::exists(sourceDir) || !std::filesystem::is_directory(sourceDir)) {
         throw std::invalid_argument("[WARNING]: Source directory did not exist.");
@@ -24,8 +25,9 @@ Workspace::Workspace(
         throw std::invalid_argument("[WARNING]: Target directory did not exist.");
     }
 
-    texturePool = std::make_unique<TexturePool>(sourceDir);
-    globalObjects = std::make_unique<GlobalObjects>(sourceDir, *texturePool);
+    texturePool     = std::make_unique<TexturePool>(sourceDir / "BG");
+    globalObjects   = std::make_unique<GlobalObjects>(sourceDir / "BG", *texturePool);
+    fileTable       = std::make_unique<FileTable>(sourceDir / "fileTable.json");
 }
 
 Workspace::~Workspace() {}
@@ -40,12 +42,13 @@ bool Workspace::AddChunk(int8_t x, int8_t z) {
     }
 
     std::string filename = std::format("{}{:04X}.IPD", this->prefix, hash);
-    std::filesystem::path sourcePath = this->sourceDir / filename;
+    std::filesystem::path sourcePath = (this->sourceDir / "BG" / filename).lexically_normal();
+    std::filesystem::path targetPath = (this->targetDir / "BG" / filename).lexically_normal();
 
     if (std::filesystem::exists(sourcePath)) {
         auto chunk = std::make_unique<Chunk>(
-            sourcePath,                         // inFile
-            targetDir / filename,               // outFile
+            sourcePath,         // inFile
+            targetPath,         // outFile
             *texturePool,
             *globalObjects
         );
@@ -53,9 +56,11 @@ bool Workspace::AddChunk(int8_t x, int8_t z) {
         chunk->Parse();
         chunkPool.emplace(hash, std::move(chunk));
 
+        chunk->GetDependencies();
+
         return true;
     } else {
-        std::cerr << "[WARNING]: Chunk does not exist with filename " << filename << std::endl;
+        std::cerr << "[WARNING]: Chunk does not exist with path " << NormalisePath((targetDir / "BG" / filename).string()) << std::endl;
         return false;
     }
 }
