@@ -50,8 +50,9 @@ class Chunk {
 		BinaryFile			outFile_;
 
 		// ~~~~~~~~ Properties ~~~~~~~~~
-		bool 				loaded,
-							legal;
+		bool 				inMemory_,
+							inViewport_,
+							legal_;
 
 	public:
 		int8_t 				chunkMajorX_,

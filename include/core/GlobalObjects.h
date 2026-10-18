@@ -3,6 +3,7 @@
 #include <string>
 #include <fstream>
 #include <filesystem>
+#include <cstdint>
 
 #include "core/DataStructs.h"
 #include "core/DataOperations.h"
@@ -18,18 +19,25 @@ class GlobalObjects {
 		TexturePool&		texturePool_;
 
 		// ~~~~~~~~ I/O ~~~~~~~~~
-		std::filesystem::path	sourceDir_;
-		std::string			filename_;
-		BinaryFile			file_;
+		BinaryFile			inFile_;
+		BinaryFile			outFile_;
 
 		// ~~~~~~~~ Properties ~~~~~~~~~
-		std::string			prefix_;
-		uint8_t				chunkUsage;				// Increments per chunk object
-													// Safeguard this when destroying
-		bool				loaded,
-							legal;
+		uint8_t				chunkUsage_;
+		bool				active_,
+							inMemory_,
+							legal_;
 
 	public:
-		GlobalObjects(const std::filesystem::path& sourceDir, TexturePool& texturePool);
+		// Active, if XYZ_GLB.PLM exists
+		GlobalObjects(const std::filesystem::path& inFile, const std::filesystem::path& outFile,
+									 TexturePool& texturePool);
+
+		// Inactive, if XYZ_GLM.PLM does not exist
+		GlobalObjects(TexturePool& texturePool);
 		~GlobalObjects();
+
+		bool Parse();
+		bool Write();
+		bool ReconcileHeaders();
 };

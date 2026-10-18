@@ -26,11 +26,12 @@ Chunk::Chunk(
 	:
 	texturePool_(texturePool),
 	globalObjects_(globalObjects),
-	loaded(false),
-	legal(true)
+	inMemory_(false),
+	inViewport_(false),
+	legal_(true)
 {
-	inFile_.path = inFile;
-	outFile_.path = outFile;
+	inFile_.path = NormalisePath(inFile.string());
+	outFile_.path = NormalisePath(outFile.string());
 
 	assert(inFile.stem() == outFile.stem());
 }
@@ -39,10 +40,10 @@ Chunk::~Chunk() {}
 
 // ~~~~~~~~~~~ READING IPD FILES ~~~~~~~~~~~
 bool Chunk::Parse() {
-	if (this->legal) {
+	if (this->legal_) {
 		inFile_.stream.open(inFile_.path, std::ios::in | std::ios::binary);
 		if (!inFile_.stream) {
-			std::cerr << "[ERROR]: Failed to open contents of IPD file!" << std::endl;
+			std::cerr << "[ERROR]: Failed to access contents of " << inFile_.path.stem().string() + ".IPD" << std::endl;
 			return false;
 		}
 
@@ -98,25 +99,24 @@ bool Chunk::Parse() {
 
 		inFile_.stream.close();
 
-		this->loaded = true;
-		std::cout << "[SUCCESS]: Parsed " << inFile_.path.stem().string() << std::endl;
+		this->inMemory_ = true;
+		std::cout << "[SUCCESS]: Parsed " << inFile_.path.stem().string() + ".IPD" << std::endl;
 
 		return true;
 	} else {
-		std::cout << "[WARNING]: Fix existing integrity issues before unpacking!" << std::endl;
+		std::cerr << "[WARNING]: Fix existing integrity issues before parsing " << inFile_.path.stem().string() + ".IPD" << std::endl;
 		return false;
 	}
 }
 
 // ~~~~~~~~~~~ WRITING IPD FILES ~~~~~~~~~~~
 bool Chunk::Write() {
-	if (this->legal) {
+	if (this->legal_) {
 		this->ReconcileHeaders();
 
 		outFile_.stream.open(outFile_.path, std::ios::out | std::ios::binary | std::ios::trunc);
 		if (!outFile_.stream) {
-
-			std::cerr << "[WARNING]: Failed to open contents of new IPD file!" << std::endl;
+			std::cerr << "[WARNING]: Failed to access contents of " << outFile_.path.stem().string() << + ".IPD" << std::endl;
 			return false;
 		}
 
@@ -167,11 +167,11 @@ bool Chunk::Write() {
 
 		outFile_.stream.close();
 
-		std::cout << "[SUCCESS]: Wrote " << inFile_.path.stem().string() << std::endl;
+		std::cout << "[SUCCESS]: Wrote " << outFile_.path.stem().string() + ".IPD" << std::endl;
 		return true;
 
 	} else {
-		std::cout << "Fix existing integrity issues before packing!" << std::endl;
+		std::cerr << "[WARNING]: Fix existing integrity issues before writing " << outFile_.path.stem().string() + ".IPD" << std::endl;
 		return false;
 	}
 }
@@ -255,5 +255,5 @@ int Chunk::GetSizeInPath() {
 }
 
 bool Chunk::IsValid() {
-	return (header_.isValid() && this->legal);
+	return (header_.isValid() && this->legal_);
 }

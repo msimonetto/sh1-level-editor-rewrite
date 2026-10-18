@@ -33,6 +33,9 @@ class Workspace {
 
         bool AddChunk(int8_t x, int8_t z);
         bool RemoveChunk(int8_t x, int8_t z);
-        bool PackChunk(int8_t x, int8_t z);
+        bool ExportChunk(int8_t x, int8_t z);
         bool ReconcileChunk(int8_t x, int8_t z);
+
+        bool AddGlobals();
+        bool ExportGlobals();
 };

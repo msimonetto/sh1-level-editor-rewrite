@@ -26,12 +26,21 @@ Workspace::Workspace(
     }
 
     texturePool     = std::make_unique<TexturePool>(sourceDir / "BG");
-    globalObjects   = std::make_unique<GlobalObjects>(sourceDir / "BG", *texturePool);
+
+    std::filesystem::path sourcePLM = sourceDir / "BG" / (prefix + "_GLB.PLM");
+    std::filesystem::path targetPLM = targetDir / "BG" / (prefix + "_GLB.PLM");
+    if (std::filesystem::exists(sourcePLM)) {
+        globalObjects   = std::make_unique<GlobalObjects>(sourcePLM, targetPLM, *texturePool);
+    } else {
+        globalObjects   = std::make_unique<GlobalObjects>(*texturePool);    // Inactive
+    }
+    
     fileTable       = std::make_unique<FileTable>(sourceDir / "fileTable.json");
 }
 
 Workspace::~Workspace() {}
 
+// ~~~~~~~~~ CHUNK MANAGEMENT ~~~~~~~~~
 bool Workspace::AddChunk(int8_t x, int8_t z) {
     uint16_t hash = ChunkHash(x, z);
 
@@ -69,7 +78,7 @@ bool Workspace::RemoveChunk(int8_t x, int8_t z) {
     return (chunkPool.erase(ChunkHash(x, z)));
 }
 
-bool Workspace::PackChunk(int8_t x, int8_t z) {
+bool Workspace::ExportChunk(int8_t x, int8_t z) {
     uint16_t hash = ChunkHash(x, z);
 
     if (!chunkPool.contains(hash)) {
@@ -83,4 +92,13 @@ bool Workspace::PackChunk(int8_t x, int8_t z) {
 bool Workspace::ReconcileChunk(int8_t x, int8_t z) {
     uint16_t hash = ChunkHash(x, z);
     return chunkPool.at(hash)->ReconcileHeaders();
+}
+
+// ~~~~~~~~~ GLOBAL OBJECT MANAGEMENT ~~~~~~~~~
+bool Workspace::AddGlobals() {
+    return globalObjects->Parse();
+}
+
+bool Workspace::ExportGlobals() {
+    return globalObjects->Write();
 }

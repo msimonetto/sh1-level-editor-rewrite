@@ -13,7 +13,9 @@ int main(int argc, char* argv[]) {
     std::filesystem::path dir = "D:/Projects/sh1-level-editor-rewrite/data/";
     auto workspace = std::make_unique<Workspace>(dir, prefix);
     workspace->AddChunk(x, z);
-    workspace->PackChunk(x, z);
+    workspace->ExportChunk(x, z);
+    workspace->AddGlobals();
+    workspace->ExportGlobals();
 
     return 0;
 }
