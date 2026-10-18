@@ -114,13 +114,15 @@ bool Chunk::UnpackChunkToMem() {
 	}
 }
 
-// ~~~~~~~~~~~ UPDATING VALUES UPON CHANGE ~~~~~~~~~~~
-bool Chunk::ReconcileCounts() {
+// ~~~~~~~~~~~ DYNAMIC EDITING ~~~~~~~~~~~
+// Not immediately necessary for unpacking/packing, but will be important for dynamic packing when file expands or shrinks
+bool Chunk::ReconcileHeaders() {
+	// ~~ Miscellaneous ~~
 	// Visibility table
 	std::memcpy(header_.visibilityTable.subcells, visibilityTable_.subcells, sizeof(IPD_VISIBILITY_RANGE) * 25);
 
-	// Counts
-	header_.count_LM_MODEL_ORDER                    = renderOrder_.size();
+	// ~~ Counts ~~
+	// Scene groups
     header_.count_IPD_SCENE_GROUP                   = sceneGroups_.size();
     for (auto& sceneGroup : sceneGroups_) {
     	sceneGroup.header.count_IPD_SCENE_GROUP_INSTANCE	= sceneGroup.groupInstances.size();
@@ -128,6 +130,10 @@ bool Chunk::ReconcileCounts() {
     	sceneGroup.header.count_IPD_SCENE_BOUNDING_BOX 		= sceneGroup.boundingBoxes.size();
     }
 
+    // Model order
+	header_.count_LM_MODEL_ORDER                    = renderOrder_.size();
+
+    // Collision
     collisionData_.header.count_IPD_COLL_VERTEX     = collisionData_.vertices.size();
     collisionData_.header.count_IPD_COLL_SURFACE    = collisionData_.surfaces.size();
     collisionData_.header.count_IPD_COLL_LINE       = collisionData_.lines.size();
@@ -135,48 +141,72 @@ bool Chunk::ReconcileCounts() {
     collisionData_.header.count_verticalIdxPool   	= collisionData_.verticalIdxPool.size();
     collisionData_.header.count_floorIdxPool   		= collisionData_.floorIdxPool.size();
 
+    // Internal LM
     internalLMData_.header.count_LM_MODEL_HEADER 	= internalLMData_.models.size();
 	internalLMData_.header.count_LM_MATERIAL		= internalLMData_.materials.size();
 
-	// Incomplete
+	// ~~ Offsets ~~
+	uint32_t currentOffset;
+	auto ReconcileByVector = [&currentOffset](auto& assignedOffset, const auto& container, uint32_t anchor = 0) {
+		currentOffset 	= AlignToDWORD(currentOffset);
+		assignedOffset 	= currentOffset - anchor;
+		currentOffset  += container.size() * sizeof(typename std::decay_t<decltype(container)>::value_type);
+	};
 
-	return true;
-}
-
-bool Chunk::ReconcileOffsets() {
-	// Offsets
-	header_.offset_IPD_SCENE_GROUP 							= AlignToDWORD(header_.offset_IPD_MODEL_INFO + sizeof(IPD_MODEL_INFO) * modelLookupTable_.size());
-	uint32_t currentOffset 									= AlignToDWORD(header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * sceneGroups_.size());
-
+	// Scene groups
+	header_.offset_IPD_SCENE_GROUP 					= AlignToDWORD(header_.offset_IPD_MODEL_INFO + sizeof(IPD_MODEL_INFO) * modelLookupTable_.size());
+	currentOffset 									= AlignToDWORD(header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * sceneGroups_.size());
 	for (auto& sceneGroup : sceneGroups_) {
-		currentOffset = AlignToDWORD(currentOffset);
-	    sceneGroup.header.offset_IPD_SCENE_GROUP_INSTANCE 	= currentOffset;
-	    currentOffset += sceneGroup.groupInstances.size() 	* sizeof(IPD_SCENE_GROUP_INSTANCE);
-
-	    currentOffset = AlignToDWORD(currentOffset);
-	    sceneGroup.header.offset_IPD_SCENE_BILLBOARD 		= currentOffset;
-	    currentOffset += sceneGroup.billboards.size() 		* sizeof(IPD_SCENE_BILLBOARD);
-
-	    currentOffset = AlignToDWORD(currentOffset);
-	    sceneGroup.header.offset_IPD_SCENE_BOUNDING_BOX 	= currentOffset;
-	    currentOffset += sceneGroup.boundingBoxes.size() 	* sizeof(IPD_SCENE_BOUNDING_BOX);
+		ReconcileByVector(sceneGroup.header.offset_IPD_SCENE_GROUP_INSTANCE,	sceneGroup.groupInstances);
+		ReconcileByVector(sceneGroup.header.offset_IPD_SCENE_BILLBOARD,			sceneGroup.billboards);
+		ReconcileByVector(sceneGroup.header.offset_IPD_SCENE_BOUNDING_BOX,		sceneGroup.boundingBoxes);
 	}
 
-	uint8_t lastSceneGroupElement = std::max(0, (int)(sceneGroups_.size()-1));
-	header_.offset_LM_MODEL_ORDER 							= sceneGroups_[lastSceneGroupElement].header.offset_IPD_SCENE_BOUNDING_BOX + sizeof(IPD_SCENE_BOUNDING_BOX);
+	// Model order
+	uint8_t lastSceneGroupElement 					= std::max(0, (int)(sceneGroups_.size() - 1));
+	header_.offset_LM_MODEL_ORDER 					= sceneGroups_[lastSceneGroupElement].header.offset_IPD_SCENE_BOUNDING_BOX + sizeof(IPD_SCENE_BOUNDING_BOX);
 
-	uint32_t collisionPayloadOffset = AlignToDWORD(header_.offset_LM_MODEL_ORDER + renderOrder_.size());
-	collisionData_.header.offset_IPD_COLL_VERTEX = (uint32_t)(collisionPayloadOffset - sizeof(IPD_HEADER));
+	// Collision
+	currentOffset 									= AlignToDWORD(header_.offset_LM_MODEL_ORDER + renderOrder_.size());
+	ReconcileByVector(collisionData_.header.offset_IPD_COLL_VERTEX,         collisionData_.vertices, 		sizeof(IPD_HEADER));
+	ReconcileByVector(collisionData_.header.offset_IPD_COLL_SURFACE,        collisionData_.surfaces,		sizeof(IPD_HEADER));
+	ReconcileByVector(collisionData_.header.offset_IPD_COLL_LINE,           collisionData_.lines,			sizeof(IPD_HEADER));
+	ReconcileByVector(collisionData_.header.offset_IPD_COLL_CYLINDER,       collisionData_.cylinders,		sizeof(IPD_HEADER));
+	ReconcileByVector(collisionData_.header.offset_IPD_COLL_SUBCELL_LOOKUP,	collisionData_.subcellLookup,	sizeof(IPD_HEADER));
+	ReconcileByVector(collisionData_.header.offset_verticalIdxPool,         collisionData_.verticalIdxPool, sizeof(IPD_HEADER));
+	ReconcileByVector(collisionData_.header.offset_floorIdxPool,            collisionData_.floorIdxPool,	sizeof(IPD_HEADER));
 
-	// Incomplete
+	// Internal LM
+	header_.offset_LM_HEADER 						= AlignToDWORD(currentOffset);
+
+	// Reset offset relative to start of LM_HEADER (these are relative offsets onwards)
+	currentOffset 									= sizeof(LM_HEADER);
+	ReconcileByVector(internalLMData_.header.offset_LM_MATERIAL, 			internalLMData_.materials);
+	ReconcileByVector(internalLMData_.header.offset_LM_MODEL_HEADER, 		internalLMData_.models);
+
+	for (auto& model : internalLMData_.models) {
+	    currentOffset = AlignToDWORD(currentOffset);
+	    model.header.offset_LM_MESH_HEADER = currentOffset;
+
+	    currentOffset += model.meshes.size() * sizeof(LM_MESH_HEADER);
+
+	    for (auto& mesh : model.meshes) {
+	        ReconcileByVector(mesh.header.offset_LM_PRIMITIVE, mesh.primitives);
+	        ReconcileByVector(mesh.header.offset_VertexXZ,     mesh.verticesXZ);
+	        ReconcileByVector(mesh.header.offset_VertexY,      mesh.verticesY);
+	        ReconcileByVector(mesh.header.offset_LM_NORMAL,    mesh.normals);
+	        ReconcileByVector(mesh.header.offset_Shading,      mesh.shadings);
+	    }
+	}
+
+    ReconcileByVector(internalLMData_.header.offset_LM_MODEL_ORDER,			internalLMData_.modelOrder);
 
 	return true;
 }
 
 bool Chunk::PackChunkFromMem() {
 	if (this->legal) {
-		this->ReconcileCounts();
-		this->ReconcileOffsets();
+		this->ReconcileHeaders();
 
 		outFile_.stream.open(outFile_.path, std::ios::out | std::ios::binary | std::ios::trunc);
 		if (!outFile_.stream) {

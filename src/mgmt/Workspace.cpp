@@ -77,5 +77,5 @@ bool Workspace::PackChunk(int8_t x, int8_t z) {
 
 bool Workspace::ReconcileChunk(int8_t x, int8_t z) {
     uint16_t hash = ChunkHash(x, z);
-    return chunkPool.at(hash)->ReconcileCounts() && chunkPool.at(hash)->ReconcileOffsets();
+    return chunkPool.at(hash)->ReconcileHeaders();
 }
