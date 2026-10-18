@@ -102,7 +102,7 @@ struct IPD_SCENE_BOUNDING_BOX {
 // IPD_SCENE_GROUP (size: 24 bytes), assume contiguous
 struct IPD_SCENE_GROUP {
     uint8_t         count_IPD_SCENE_GROUP_INSTANCE;
-    uint8_t         count_IPD_SCENE_BILLBOARD;      // Unknown in Sparagas: field_1 -> billboardCount. Streetlamp glows, light source flares?
+    uint8_t         count_IPD_SCENE_BILLBOARD;      // Tree leaves, etc
     uint8_t         count_IPD_SCENE_BOUNDING_BOX;
     int8_t          __pad;
     IPD_SCENE_BOUNDING_BOX   groupBoundingBox;

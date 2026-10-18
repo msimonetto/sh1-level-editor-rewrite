@@ -12,8 +12,8 @@
 struct MeshData {
 	LM_MESH_HEADER				header;
 	std::vector<LM_PRIMITIVE>	primitives;
-	std::vector<DVECTOR> 		verticesXY;
-	std::vector<int16_t>		verticesZ;
+	std::vector<DVECTOR> 		verticesXZ;
+	std::vector<int16_t>		verticesY;
 	std::vector<LM_NORMAL>		normals;
 	std::vector<uint8_t>		shadings;
 };

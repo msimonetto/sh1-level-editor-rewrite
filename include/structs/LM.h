@@ -39,8 +39,8 @@ struct LM_MESH_HEADER {
     uint8_t         count_Shading;                  // Unknown in Sparagas, related to offset_unkoffset_14. 
                                                     // Ambient occlusion. For unlit models, light intensity bytes are passed to GTE into shading buffer.
     uint32_t        offset_LM_PRIMITIVE;
-    uint32_t        offset_VertexXY;
-    uint32_t        offset_VertexZ;
+    uint32_t        offset_VertexXZ;
+    uint32_t        offset_VertexY;
     uint32_t        offset_LM_NORMAL;
     uint32_t        offset_Shading;                 // Collected from unkCount_3
 };

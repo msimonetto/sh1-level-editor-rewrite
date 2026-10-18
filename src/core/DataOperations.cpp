@@ -86,8 +86,8 @@ bool UnpackLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& textureP
 
 			// Locate mesh's primitives, vertices, ... and each of their counts, then unpack
 			UnpackToVector(lmBaseOffset + hdr.offset_LM_PRIMITIVE,	hdr.count_LM_PRIMITIVE,	mesh.primitives,	inFile);
-			UnpackToVector(lmBaseOffset + hdr.offset_VertexXY,		hdr.count_Vertex,		mesh.verticesXY,	inFile);
-			UnpackToVector(lmBaseOffset + hdr.offset_VertexZ,		hdr.count_Vertex,		mesh.verticesZ,		inFile);
+			UnpackToVector(lmBaseOffset + hdr.offset_VertexXZ,		hdr.count_Vertex,		mesh.verticesXZ,	inFile);
+			UnpackToVector(lmBaseOffset + hdr.offset_VertexY,		hdr.count_Vertex,		mesh.verticesY,		inFile);
 			UnpackToVector(lmBaseOffset + hdr.offset_LM_NORMAL,		hdr.count_LM_NORMAL,	mesh.normals,		inFile);
 			UnpackToVector(lmBaseOffset + hdr.offset_Shading,		hdr.count_Shading,		mesh.shadings,		inFile);
 		}
@@ -171,8 +171,8 @@ bool PackLMModels(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& text
 
 			// Locate mesh's primitives, vertices etc then pack
 			PackFromVector(lmBaseOffset + hdr.offset_LM_PRIMITIVE,	mesh.primitives,	outFile);
-			PackFromVector(lmBaseOffset + hdr.offset_VertexXY,		mesh.verticesXY,	outFile);
-			PackFromVector(lmBaseOffset + hdr.offset_VertexZ,		mesh.verticesZ,		outFile);
+			PackFromVector(lmBaseOffset + hdr.offset_VertexXZ,		mesh.verticesXZ,	outFile);
+			PackFromVector(lmBaseOffset + hdr.offset_VertexY,		mesh.verticesY,		outFile);
 			PackFromVector(lmBaseOffset + hdr.offset_LM_NORMAL,		mesh.normals,		outFile);
 			PackFromVector(lmBaseOffset + hdr.offset_Shading,		mesh.shadings,		outFile);
 		}
