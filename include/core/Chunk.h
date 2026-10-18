@@ -66,8 +66,4 @@ class Chunk {
 		bool Write();
 		bool GetDependencies();
 		bool ReconcileHeaders();
-
-		int GetSizeInPath();
-		int GetSizeInMem();
-		bool IsValid();
 };

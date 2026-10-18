@@ -64,6 +64,8 @@ bool GlobalObjects::Parse() {
 
 bool GlobalObjects::Write() {
 	if (this->legal_ && this->active_) {
+		this->ReconcileHeaders();
+		
 		outFile_.stream.open(outFile_.path, std::ios::out | std::ios::binary | std::ios::trunc);
 		if (!outFile_.stream) {
 			std::cerr << "[ERROR]: Failed to access contents of " << outFile_.path.stem().string() + ".PLM" << std::endl;
@@ -90,4 +92,8 @@ bool GlobalObjects::Write() {
 	}
 }
 
-// bool GlobalObjects::ReconcileHeaders() {}
+bool GlobalObjects::ReconcileHeaders() {
+	uint32_t currentOffset = 0;
+	currentOffset = ReconcileLMData(currentOffset, globalLMData_);
+	return true;
+}

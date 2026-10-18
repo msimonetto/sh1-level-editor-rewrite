@@ -241,19 +241,3 @@ bool Chunk::ReconcileHeaders() {
 
 	return true;
 }
-
-int Chunk::GetSizeInPath() {
-	std::error_code errorCode;
-	auto size = std::filesystem::file_size(inFile_.path);
-
-	if (errorCode) {
-		std::cerr << "[ERROR]: " << errorCode.message() << std::endl;
-		return 0;
-	}
-
-	return static_cast<int>(size);
-}
-
-bool Chunk::IsValid() {
-	return (header_.isValid() && this->legal_);
-}
