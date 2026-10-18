@@ -48,7 +48,7 @@ struct LM_MESH_HEADER {
 // LM_MODEL_HEADER (size: 16 bytes), needs verification
 struct LM_MODEL_HEADER {
     u_Filename      name;
-    uint8_t         meshCount;
+    uint8_t         count_LM_MESH_HEADER;
     uint8_t         offset_vertex;                  // Why would these be standalone and uint8_t?
     uint8_t         offset_normal;                  // Unsure what these do
     uint8_t         flag1           : 1;

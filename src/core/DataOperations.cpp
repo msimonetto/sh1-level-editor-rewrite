@@ -69,7 +69,7 @@ bool UnpackLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& textureP
 
 		// Locate model's first mesh and its mesh count
 		int meshBaseOffset 	= lmBaseOffset + model.header.offset_LM_MESH_HEADER;
-		int meshCount		= model.header.meshCount;
+		int meshCount		= model.header.count_LM_MESH_HEADER;
 		model.meshes.resize(meshCount);
 
 		// Unpack each mesh
@@ -156,7 +156,7 @@ bool PackLMModels(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& text
 
 		// Locate model's first mesh and its mesh count (already reconciled)
 		int meshBaseOffset 	= lmBaseOffset + model.header.offset_LM_MESH_HEADER;
-		int meshCount		= model.header.meshCount;
+		int meshCount		= model.header.count_LM_MESH_HEADER;
 
 		for (uint8_t j = 0; j < meshCount; ++j) {
 			auto& mesh = model.meshes[j];
