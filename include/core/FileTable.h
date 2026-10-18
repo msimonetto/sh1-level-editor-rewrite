@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <nlohmann/json.hpp>
 
+#include "core/DataStructs.h"
+
 using json = nlohmann::json;
 
 struct FileTableEntry {
@@ -33,7 +35,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(FileTableEntry, lba, size_blocks, name, dir, 
 
 class FileTable {
 	private:
-		std::vector<FileTableEntry> 			entries_;
+		BoundedVector_fileTable<FileTableEntry> 			entries_;
 		std::unordered_map<std::string, size_t> lookupTable_;
 
 		bool RebuildTable();
@@ -45,7 +47,7 @@ class FileTable {
 		bool ExportTable(const std::filesystem::path& path);
 
 		size_t GetEntryCount() const { return entries_.size(); }
-		const std::vector<FileTableEntry>& GetAllEntries() const { return entries_; }
+		const BoundedVector_fileTable<FileTableEntry>& GetAllEntries() const { return entries_; }
 		FileTableEntry* FindEntry(const std::string& path);
 
 		bool UpdateSize(const std::string& path, size_t newSize);

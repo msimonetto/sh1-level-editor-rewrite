@@ -18,9 +18,9 @@
 // 2048x2048 scene grid of models/lights (per chunk)
 struct SceneGroupData {
 	IPD_SCENE_GROUP							header;
-	std::vector<IPD_SCENE_GROUP_INSTANCE>	groupInstances;
-	std::vector<IPD_SCENE_BILLBOARD>		billboards;
-	std::vector<IPD_SCENE_BOUNDING_BOX>		boundingBoxes;
+	BoundedVector_uint8<IPD_SCENE_GROUP_INSTANCE>	groupInstances;
+	BoundedVector_uint8<IPD_SCENE_BILLBOARD>		billboards;
+	BoundedVector_uint8<IPD_SCENE_BOUNDING_BOX>		boundingBoxes;
 };
 
 class Chunk {
@@ -32,16 +32,16 @@ class Chunk {
 		
 		// ~~~ Scene ~~~
 		IPD_VISIBILITY_TABLE			visibilityTable_;
-		std::vector<IPD_MODEL_INFO>		modelLookupTable_;
-		std::vector<SceneGroupData>		sceneGroups_;
-		std::vector<uint8_t>			renderOrder_;
+		BoundedVector_uint8<IPD_MODEL_INFO>		modelLookupTable_;
+		BoundedVector_uint8<SceneGroupData>		sceneGroups_;
+		BoundedVector_uint8<uint8_t>			renderOrder_;
 
 		// ~~~ Collision ~~~
 		CollisionData		collisionData_;
 
 		// Globals
-		std::unordered_set<std::string>		dependentTextures_;			// Consider limiting size based on engine constraints
-		std::unordered_set<std::string>		dependentGlobalObjects_;
+		BoundedVector_uint4<std::string>		dependentTextures_;
+		BoundedVector_uint8<std::string>		dependentGlobalObjects_;	// Maybe demote that down from 256 -> 16
 		TexturePool&		texturePool_;
 		GlobalObjects&		globalObjects_;
 
