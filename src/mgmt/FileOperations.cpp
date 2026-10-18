@@ -41,3 +41,8 @@ std::string Convert6BitFilenameToString(const u_Filename& filename) {
 
 	return newFilename;
 }
+
+std::string NormalisePath(std::string path) {
+	std::replace(path.begin(), path.end(), '\\', '/');
+	return std::move(path);
+}

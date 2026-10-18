@@ -43,3 +43,4 @@ const std::string supportedExtensions[16] = {
 // ~~~~~~~~~~~ Filename operations ~~~~~~~~~~~
 bool IsSupportedExtension(const std::filesystem::path& path);
 std::string Convert6BitFilenameToString(const u_Filename& filename);
+std::string NormalisePath(std::string path);
