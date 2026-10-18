@@ -50,7 +50,7 @@ bool Workspace::AddChunk(int8_t x, int8_t z) {
             *globalObjects
         );
 
-        chunk->UnpackChunkToMem();
+        chunk->Parse();
         chunkPool.emplace(hash, std::move(chunk));
 
         return true;
@@ -72,7 +72,7 @@ bool Workspace::PackChunk(int8_t x, int8_t z) {
         return false;
     }
 
-    return chunkPool.at(hash)->PackChunkFromMem();
+    return chunkPool.at(hash)->Write();
 }
 
 bool Workspace::ReconcileChunk(int8_t x, int8_t z) {

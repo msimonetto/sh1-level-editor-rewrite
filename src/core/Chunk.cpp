@@ -39,7 +39,7 @@ Chunk::Chunk(
 Chunk::~Chunk() {}
 
 // ~~~~~~~~~~~ READING IPD FILES ~~~~~~~~~~~
-bool Chunk::UnpackChunkToMem() {
+bool Chunk::Parse() {
 	if (this->legal) {
 		// Open IPD file
 		inFile_.stream.open(inFile_.path, std::ios::in | std::ios::binary);
@@ -49,7 +49,7 @@ bool Chunk::UnpackChunkToMem() {
 		}
 
 		// Unpack IPD header
-		UnpackToStruct(0, sizeof(IPD_HEADER), header_, inFile_);
+		UnpackBinary(0, sizeof(IPD_HEADER), &header_, inFile_);
 		if (!(header_.isValid())) {
 			std::cerr << "[ERROR]: Not a valid IPD header, value at position 0x00 is (as int) " << (int)(header_.id) << std::endl;
 			return false;
@@ -67,12 +67,12 @@ bool Chunk::UnpackChunkToMem() {
 		// Unpack internal LM header
 		uint32_t internalLMBaseOffset = header_.offset_LM_HEADER;
 		
-		UnpackToStruct(internalLMBaseOffset, sizeof(LM_HEADER), internalLMData_.header, inFile_);
+		UnpackBinary(internalLMBaseOffset, sizeof(LM_HEADER), &internalLMData_.header, inFile_);
 		
 		// Internal LM data
-		UnpackLMMaterials(internalLMBaseOffset, internalLMData_, texturePool_, inFile_);
-		UnpackLMModels(internalLMBaseOffset, internalLMData_, texturePool_, inFile_);
-		UnpackLMModelOrder(internalLMBaseOffset, internalLMData_, inFile_);
+		ParseLMMaterials(internalLMBaseOffset, internalLMData_, texturePool_, inFile_);
+		ParseLMModels(internalLMBaseOffset, internalLMData_, texturePool_, inFile_);
+		ParseLMModelOrder(internalLMBaseOffset, internalLMData_, inFile_);
 
 		// Model lookup tables, contiguous up until first scene/model buffer
 		uint8_t modelLookupCount = (header_.offset_IPD_SCENE_GROUP - header_.offset_IPD_MODEL_INFO) / sizeof(IPD_MODEL_INFO);
@@ -83,7 +83,7 @@ bool Chunk::UnpackChunkToMem() {
 		UnpackToVector(header_.offset_LM_MODEL_ORDER, header_.count_LM_MODEL_ORDER, renderOrder_, inFile_);
 
 		// Visibility table (stored separately, even though in header)
-		UnpackToStruct(28, sizeof(IPD_VISIBILITY_TABLE), visibilityTable_, inFile_);
+		UnpackBinary(28, sizeof(IPD_VISIBILITY_TABLE), &visibilityTable_, inFile_);
 
 		// Scene/model buffer tables
 		sceneGroups_.resize(header_.count_IPD_SCENE_GROUP);
@@ -91,7 +91,7 @@ bool Chunk::UnpackChunkToMem() {
 		for (size_t i = 0; i < header_.count_IPD_SCENE_GROUP; ++i) {
 			auto& hdr = sceneGroups_[i].header;
 			
-			UnpackToStruct(header_.offset_IPD_SCENE_GROUP + i * sizeof(IPD_SCENE_GROUP), sizeof(IPD_SCENE_GROUP), hdr, inFile_);
+			UnpackBinary(header_.offset_IPD_SCENE_GROUP + i * sizeof(IPD_SCENE_GROUP), sizeof(IPD_SCENE_GROUP), &hdr, inFile_);
 			
 			UnpackToVector(hdr.offset_IPD_SCENE_GROUP_INSTANCE, hdr.count_IPD_SCENE_GROUP_INSTANCE, sceneGroups_[i].groupInstances, inFile_);
 			UnpackToVector(hdr.offset_IPD_SCENE_BILLBOARD, 		hdr.count_IPD_SCENE_BILLBOARD, 		sceneGroups_[i].billboards, 	inFile_);
@@ -100,17 +100,93 @@ bool Chunk::UnpackChunkToMem() {
 
 		// Collision
 		// We will untangle this further later, keep in its original structure for now
-		UnpackToStruct(sizeof(IPD_HEADER), sizeof(IPD_COLL_HEADER), collisionData_.header, inFile_);
-		UnpackCollision(collisionData_, inFile_);
+		UnpackBinary(sizeof(IPD_HEADER), sizeof(IPD_COLL_HEADER), &collisionData_.header, inFile_);
+		ParseCollision(collisionData_, inFile_);
 
 		inFile_.stream.close();
 
 		this->loaded = true;
-		std::cout << "[SUCCESS]: Unpacked " << inFile_.path << " to memory!" << std::endl;
+		std::cout << "[SUCCESS]: Parsed " << inFile_.path.stem().string() << std::endl;
 
 		return true;
 	} else {
 		std::cout << "[WARNING]: Fix existing integrity issues before unpacking!" << std::endl;
+		return false;
+	}
+}
+
+// ~~~~~~~~~~~ WRITING IPD FILES ~~~~~~~~~~~
+bool Chunk::Write() {
+	if (this->legal) {
+		this->ReconcileHeaders();
+
+		outFile_.stream.open(outFile_.path, std::ios::out | std::ios::binary | std::ios::trunc);
+		if (!outFile_.stream) {
+
+			std::cerr << "[WARNING]: Failed to open contents of new IPD file!" << std::endl;
+			return false;
+		}
+
+		// Fixed block starts at 0, 84
+		PackBinary(0, sizeof(IPD_HEADER), &header_, outFile_);											// Header
+		PackBinary(sizeof(IPD_HEADER), sizeof(IPD_COLL_HEADER), &collisionData_.header, outFile_);		// Collision header
+
+		// Model lookup table w/ fixed block start at 392 (sizeof(IPD_HEADER) + sizeof(IPD_COLL_HEADER))
+		for (size_t i = 0; i < modelLookupTable_.size(); ++i) {
+			PackBinary(sizeof(IPD_HEADER) + sizeof(IPD_COLL_HEADER) + sizeof(IPD_MODEL_INFO) * i, sizeof(IPD_MODEL_INFO), &modelLookupTable_[i], outFile_);
+		}
+
+		// Scene group header
+		assert(header_.offset_IPD_SCENE_GROUP == header_.offset_IPD_MODEL_INFO + sizeof(IPD_MODEL_INFO) * modelLookupTable_.size());
+		for (size_t i = 0; i < sceneGroups_.size(); ++i) {
+			PackBinary(header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * i, sizeof(IPD_SCENE_GROUP), &sceneGroups_[i].header, outFile_);
+		}
+
+		// Scene group instances/payload
+		assert(sceneGroups_[0].header.offset_IPD_SCENE_GROUP_INSTANCE == AlignToDWORD(header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * sceneGroups_.size()));
+		for (const auto& sceneGroup : sceneGroups_) {
+			PackFromVector(sceneGroup.header.offset_IPD_SCENE_GROUP_INSTANCE, 	sceneGroup.groupInstances, 	outFile_);
+			PackFromVector(sceneGroup.header.offset_IPD_SCENE_BILLBOARD, 		sceneGroup.billboards, 		outFile_);
+			PackFromVector(sceneGroup.header.offset_IPD_SCENE_BOUNDING_BOX, 	sceneGroup.boundingBoxes, 	outFile_);
+		}
+
+		// Model order payload
+		uint8_t lastSceneGroupElement = std::max(0, (int)(sceneGroups_.size()-1));
+		assert(header_.offset_LM_MODEL_ORDER == sceneGroups_[lastSceneGroupElement].header.offset_IPD_SCENE_BOUNDING_BOX + sizeof(IPD_SCENE_BOUNDING_BOX));
+		for (size_t i = 0; i < renderOrder_.size(); ++i) {
+			PackBinary(header_.offset_LM_MODEL_ORDER + i, 1, &renderOrder_[i], outFile_);
+		}
+
+		// Collision data payload (relative to +IPD_COLL_HEADER so increment by 84 bytes)
+		assert((uint32_t)(collisionData_.header.offset_IPD_COLL_VERTEX + sizeof(IPD_HEADER)) == AlignToDWORD(header_.offset_LM_MODEL_ORDER + renderOrder_.size()));
+		WriteCollision(collisionData_, outFile_);
+		uint16_t collisionDataSize = collisionData_.header.offset_floorIdxPool - collisionData_.header.offset_IPD_COLL_VERTEX;
+
+		// Internal LM header (allowance for padding from collision data payload)
+		assert(collisionData_.header.offset_IPD_COLL_VERTEX + sizeof(IPD_HEADER) + collisionDataSize <= header_.offset_LM_HEADER);
+		PackBinary(header_.offset_LM_HEADER, sizeof(LM_HEADER), &internalLMData_.header, outFile_);
+
+		// Internal LM payload
+		WriteLMMaterials(header_.offset_LM_HEADER, internalLMData_, texturePool_, outFile_);
+		WriteLMModels(header_.offset_LM_HEADER, internalLMData_, texturePool_, outFile_);
+		WriteLMModelOrder(header_.offset_LM_HEADER, internalLMData_, outFile_);
+
+		// Zero out until alignment to next 2048 byte sector (just how the file table works)
+		outFile_.stream.seekg(0, std::ios::end);
+		uint32_t finalPosition 		= static_cast<uint32_t>(outFile_.stream.tellp());
+		uint32_t alignedPosition 	= (finalPosition + 2047) & ~2047;
+		if (alignedPosition > finalPosition) {
+			std::vector<char> pad(alignedPosition - finalPosition, 0);
+			PackBinary(finalPosition, pad.size(), pad.data(), outFile_);
+		}
+
+		outFile_.stream.close();
+
+		std::cout << "[SUCCESS]: Wrote " << inFile_.path.stem().string() << std::endl;
+		return true;
+
+	} else {
+		std::cout << "Fix existing integrity issues before packing!" << std::endl;
 		return false;
 	}
 }
@@ -218,81 +294,6 @@ bool Chunk::ReconcileHeaders() {
 	std::memcpy(header_.visibilityTable.subcells, visibilityTable_.subcells, sizeof(IPD_VISIBILITY_RANGE) * 25);
 
 	return true;
-}
-
-bool Chunk::PackChunkFromMem() {
-	if (this->legal) {
-		this->ReconcileHeaders();
-
-		outFile_.stream.open(outFile_.path, std::ios::out | std::ios::binary | std::ios::trunc);
-		if (!outFile_.stream) {
-
-			std::cerr << "[WARNING]: Failed to open contents of new IPD file!" << std::endl;
-			return false;
-		}
-
-		// Fixed block starts at 0, 84
-		PackBinary(0, sizeof(IPD_HEADER), &header_, outFile_);											// Header
-		PackBinary(sizeof(IPD_HEADER), sizeof(IPD_COLL_HEADER), &collisionData_.header, outFile_);		// Collision header
-
-		// Model lookup table w/ fixed block start at 392 (sizeof(IPD_HEADER) + sizeof(IPD_COLL_HEADER))
-		for (size_t i = 0; i < modelLookupTable_.size(); ++i) {
-			PackBinary(sizeof(IPD_HEADER) + sizeof(IPD_COLL_HEADER) + sizeof(IPD_MODEL_INFO) * i, sizeof(IPD_MODEL_INFO), &modelLookupTable_[i], outFile_);
-		}
-
-		// Scene group header
-		assert(header_.offset_IPD_SCENE_GROUP == header_.offset_IPD_MODEL_INFO + sizeof(IPD_MODEL_INFO) * modelLookupTable_.size());
-		for (size_t i = 0; i < sceneGroups_.size(); ++i) {
-			PackBinary(header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * i, sizeof(IPD_SCENE_GROUP), &sceneGroups_[i].header, outFile_);
-		}
-
-		// Scene group instances/payload
-		assert(sceneGroups_[0].header.offset_IPD_SCENE_GROUP_INSTANCE == AlignToDWORD(header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * sceneGroups_.size()));
-		for (const auto& sceneGroup : sceneGroups_) {
-			PackFromVector(sceneGroup.header.offset_IPD_SCENE_GROUP_INSTANCE, 	sceneGroup.groupInstances, 	outFile_);
-			PackFromVector(sceneGroup.header.offset_IPD_SCENE_BILLBOARD, 		sceneGroup.billboards, 		outFile_);
-			PackFromVector(sceneGroup.header.offset_IPD_SCENE_BOUNDING_BOX, 	sceneGroup.boundingBoxes, 	outFile_);
-		}
-
-		// Model order payload
-		uint8_t lastSceneGroupElement = std::max(0, (int)(sceneGroups_.size()-1));
-		assert(header_.offset_LM_MODEL_ORDER == sceneGroups_[lastSceneGroupElement].header.offset_IPD_SCENE_BOUNDING_BOX + sizeof(IPD_SCENE_BOUNDING_BOX));
-		for (size_t i = 0; i < renderOrder_.size(); ++i) {
-			PackBinary(header_.offset_LM_MODEL_ORDER + i, 1, &renderOrder_[i], outFile_);
-		}
-
-		// Collision data payload (relative to +IPD_COLL_HEADER so increment by 84 bytes)
-		assert((uint32_t)(collisionData_.header.offset_IPD_COLL_VERTEX + sizeof(IPD_HEADER)) == AlignToDWORD(header_.offset_LM_MODEL_ORDER + renderOrder_.size()));
-		PackCollision(collisionData_, outFile_);
-		uint16_t collisionDataSize = collisionData_.header.offset_floorIdxPool - collisionData_.header.offset_IPD_COLL_VERTEX;
-
-		// Internal LM header (allowance for padding from collision data payload)
-		assert(collisionData_.header.offset_IPD_COLL_VERTEX + sizeof(IPD_HEADER) + collisionDataSize <= header_.offset_LM_HEADER);
-		PackBinary(header_.offset_LM_HEADER, sizeof(LM_HEADER), &internalLMData_.header, outFile_);
-
-		// Internal LM payload
-		PackLMMaterials(header_.offset_LM_HEADER, internalLMData_, texturePool_, outFile_);
-		PackLMModels(header_.offset_LM_HEADER, internalLMData_, texturePool_, outFile_);
-		PackLMModelOrder(header_.offset_LM_HEADER, internalLMData_, outFile_);
-
-		// Zero out until alignment to next 2048 byte sector (just how the file table works)
-		outFile_.stream.seekg(0, std::ios::end);
-		uint32_t finalPosition 		= static_cast<uint32_t>(outFile_.stream.tellp());
-		uint32_t alignedPosition 	= (finalPosition + 2047) & ~2047;
-		if (alignedPosition > finalPosition) {
-			std::vector<char> pad(alignedPosition - finalPosition, 0);
-			PackBinary(finalPosition, pad.size(), pad.data(), outFile_);
-		}
-
-		outFile_.stream.close();
-
-		std::cout << "[SUCCESS]: Packed " << inFile_.path << " to IPD!" << std::endl;
-		return true;
-
-	} else {
-		std::cout << "Fix existing integrity issues before packing!" << std::endl;
-		return false;
-	}
 }
 
 int Chunk::GetSizeInPath() {

@@ -27,7 +27,7 @@ bool UnpackBinary(uint32_t offset, size_t length, void* output, BinaryFile& inFi
 	return true;
 }
 
-bool UnpackLMMaterials(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& inFile) {
+bool ParseLMMaterials(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& inFile) {
 	// Locate first material and the material count
 	int materialBaseOffset 	= lmBaseOffset + lmData.header.offset_LM_MATERIAL;
 	int materialCount 		= lmData.header.count_LM_MATERIAL;
@@ -37,10 +37,10 @@ bool UnpackLMMaterials(uint32_t lmBaseOffset, LMData& lmData, TexturePool& textu
 	for (size_t i = 0; i < materialCount; ++i) {
 		auto& material = lmData.materials[i];
 		
-		UnpackToStruct(
+		UnpackBinary(
 			materialBaseOffset + i * sizeof(LM_MATERIAL),
 			sizeof(LM_MATERIAL),
-			material, inFile
+			&material, inFile
 		);
 
 		// Add unique textures (material.name) to texturePool
@@ -50,7 +50,7 @@ bool UnpackLMMaterials(uint32_t lmBaseOffset, LMData& lmData, TexturePool& textu
 	return true;
 }
 
-bool UnpackLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& inFile) {
+bool ParseLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& inFile) {
 	// Locate first model and the model count
 	int modelBaseOffset = lmBaseOffset + lmData.header.offset_LM_MODEL_HEADER;
 	int modelCount 		= lmData.header.count_LM_MODEL_HEADER;
@@ -60,10 +60,10 @@ bool UnpackLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& textureP
 	for (size_t i = 0; i < modelCount; ++i) {
 		auto& model = lmData.models[i];
 
-		UnpackToStruct(
+		UnpackBinary(
 			modelBaseOffset + i * sizeof(LM_MODEL_HEADER),
 			sizeof(LM_MODEL_HEADER),
-			model.header, inFile
+			&model.header, inFile
 		);
 
 
@@ -76,10 +76,10 @@ bool UnpackLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& textureP
 		for (size_t j = 0; j < meshCount; ++j) {
 			auto& mesh = model.meshes[j];
 
-			UnpackToStruct(
+			UnpackBinary(
 				meshBaseOffset + j * sizeof(LM_MESH_HEADER),
 				sizeof(LM_MESH_HEADER),
-				mesh.header, inFile
+				&mesh.header, inFile
 			);
 
 			const auto& hdr = mesh.header;
@@ -96,7 +96,7 @@ bool UnpackLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& textureP
 	return true;
 }
 
-bool UnpackLMModelOrder(uint32_t lmBaseOffset, LMData& lmData, BinaryFile& inFile) {
+bool ParseLMModelOrder(uint32_t lmBaseOffset, LMData& lmData, BinaryFile& inFile) {
 	uint32_t modelOrderBaseOffset = lmBaseOffset + lmData.header.offset_LM_MODEL_ORDER;
 	uint8_t modelOrderCount = lmData.header.count_LM_MODEL_HEADER;
 
@@ -104,6 +104,9 @@ bool UnpackLMModelOrder(uint32_t lmBaseOffset, LMData& lmData, BinaryFile& inFil
 
 	return true;
 }
+
+// ~~~~~~~~~~~ DYNAMIC EDITING ~~~~~~~~~~~
+
 
 // ~~~~~~~~~~~ WRITE OPERATIONS ~~~~~~~~~~~
 // Non-template version
@@ -120,7 +123,7 @@ bool PackBinary(uint32_t offset, size_t length, const void* input, BinaryFile& o
 	return true;
 }
 
-bool PackLMMaterials(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile) {
+bool WriteLMMaterials(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile) {
 	// Locate first material and the material count
 	int materialBaseOffset 	= lmBaseOffset + lmData.header.offset_LM_MATERIAL;
 	int materialCount 		= lmData.header.count_LM_MATERIAL;
@@ -139,7 +142,7 @@ bool PackLMMaterials(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& t
 	return true;
 }
 
-bool PackLMModels(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile) {
+bool WriteLMModels(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile) {
 	// Locate first model and the model count (already reconciled)
 	int modelBaseOffset = lmBaseOffset + lmData.header.offset_LM_MODEL_HEADER;
 	int modelCount 		= lmData.header.count_LM_MODEL_HEADER;
@@ -181,7 +184,7 @@ bool PackLMModels(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& text
 	return true;
 }
 
-bool PackLMModelOrder(uint32_t lmBaseOffset, const LMData& lmData, BinaryFile& outFile) {
+bool WriteLMModelOrder(uint32_t lmBaseOffset, const LMData& lmData, BinaryFile& outFile) {
 	uint32_t modelOrderBaseOffset = lmBaseOffset + lmData.header.offset_LM_MODEL_ORDER;
 	uint8_t modelOrderCount = lmData.header.count_LM_MODEL_HEADER;
 

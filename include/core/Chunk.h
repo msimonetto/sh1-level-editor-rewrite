@@ -58,9 +58,9 @@ class Chunk {
 			  TexturePool& texturePool, GlobalObjects& globalObjects);
 		~Chunk();
 
-		bool UnpackChunkToMem();
+		bool Parse();
+		bool Write();
 		bool ReconcileHeaders();
-		bool PackChunkFromMem();
 
 		int GetSizeInPath();
 		int GetSizeInMem();

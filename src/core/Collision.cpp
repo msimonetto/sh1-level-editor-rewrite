@@ -16,7 +16,7 @@
 #include "structs/IPD.h"
 #include "structs/LM.h"
 
-bool UnpackCollision(CollisionData& collisionData, BinaryFile& inFile) {
+bool ParseCollision(CollisionData& collisionData, BinaryFile& inFile) {
     auto& hdr = collisionData.header;
 
     collisionData.positionX = hdr.positionX;
@@ -40,7 +40,7 @@ bool UnpackCollision(CollisionData& collisionData, BinaryFile& inFile) {
     return true;
 }
 
-bool PackCollision(const CollisionData& collisionData, BinaryFile& outFile) {
+bool WriteCollision(const CollisionData& collisionData, BinaryFile& outFile) {
     auto& hdr = collisionData.header;
 
     // Assumes that offsets have been corrected (upon modification upstream)
