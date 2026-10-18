@@ -3,6 +3,7 @@
 #include <fstream>
 #include <numeric>
 #include <unordered_map>
+#include <cassert>
 
 #include "core/DataStructs.h"
 #include "core/DataOperations.h"
@@ -11,6 +12,15 @@
 #include "mgmt/HexOperations.h"
 
 // Shared operations between Chunk and GlobalObjects (will be expanded further)
+
+// ~~~~~~~~~~~ ALIGNMENT ~~~~~~~~~~~
+uint32_t AlignToDWORD(const uint32_t& offset) {
+	return static_cast<uint32_t>((offset + 3) & ~3);
+}
+
+uint32_t AlignToQWORD(const uint32_t& offset) {
+	return static_cast<uint32_t>((offset + 7) & ~7);
+}
 
 // ~~~~~~~~~~~ READ OPERATIONS ~~~~~~~~~~~
 // Non-template version
@@ -105,9 +115,6 @@ bool ParseLMModelOrder(uint32_t lmBaseOffset, LMData& lmData, BinaryFile& inFile
 	return true;
 }
 
-// ~~~~~~~~~~~ DYNAMIC EDITING ~~~~~~~~~~~
-
-
 // ~~~~~~~~~~~ WRITE OPERATIONS ~~~~~~~~~~~
 // Non-template version
 bool PackBinary(uint32_t offset, size_t length, const void* input, BinaryFile& outFile) {
@@ -193,7 +200,39 @@ bool WriteLMModelOrder(uint32_t lmBaseOffset, const LMData& lmData, BinaryFile& 
 	return true;
 }
 
-// ~~~~~~~~~~~ MISCELLANEOUS ~~~~~~~~~~~
-uint32_t AlignToDWORD(const uint32_t& offset) {
-	return static_cast<uint32_t>((offset + 3) & ~3);
+// ~~~~~~~~~~~ RECONCILIATION ~~~~~~~~~~~
+uint32_t ReconcileLMData(uint32_t currentOffset, LMData& lmData) {
+	lmData.header.count_LM_MODEL_HEADER 	= lmData.models.size();
+	lmData.header.count_LM_MATERIAL			= lmData.materials.size();
+
+	ReconcilePush(currentOffset, lmData.header.offset_LM_MATERIAL, lmData.materials);
+	ReconcilePush<LM_MODEL_HEADER>(currentOffset, lmData.header.offset_LM_MODEL_HEADER, lmData.models);
+
+	if (!lmData.modelOrder.empty()) {
+		uint32_t modelOrderPaddedSize = (lmData.modelOrder.size() + 15) & ~15;
+		currentOffset = lmData.header.offset_LM_MODEL_ORDER + modelOrderPaddedSize - 16;
+	}
+	ReconcilePush(currentOffset, lmData.header.offset_LM_MODEL_ORDER, lmData.modelOrder);
+
+	for (auto& model : lmData.models) {
+		model.header.count_LM_MESH_HEADER			= model.meshes.size();
+		ReconcilePush<LM_MESH_HEADER>(currentOffset, model.header.offset_LM_MESH_HEADER, model.meshes);
+
+		for (auto& mesh : model.meshes) {
+			assert(mesh.verticesXZ.size() == mesh.verticesY.size());
+
+			mesh.header.count_LM_PRIMITIVE			= mesh.primitives.size();
+			mesh.header.count_Vertex				= mesh.verticesXZ.size();
+			mesh.header.count_LM_NORMAL				= mesh.normals.size();
+			mesh.header.count_Shading				= mesh.shadings.size();
+
+			ReconcilePush(currentOffset, mesh.header.offset_LM_PRIMITIVE, mesh.primitives);
+	        ReconcilePush(currentOffset, mesh.header.offset_VertexXZ,     mesh.verticesXZ);
+	        ReconcilePush(currentOffset, mesh.header.offset_VertexY,      mesh.verticesY);
+	        ReconcilePush(currentOffset, mesh.header.offset_LM_NORMAL,    mesh.normals);
+	        ReconcilePush(currentOffset, mesh.header.offset_Shading,      mesh.shadings);
+		}
+	}
+
+	return currentOffset;
 }

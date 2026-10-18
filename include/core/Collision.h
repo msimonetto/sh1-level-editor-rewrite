@@ -31,3 +31,4 @@ struct CollisionData {
 
 bool ParseCollision(CollisionData& collisionData, BinaryFile& inFile);
 bool WriteCollision(const CollisionData& collisionData, BinaryFile& outFile);
+uint32_t ReconcileCollision(uint32_t& currentOffset, CollisionData& collisionData);

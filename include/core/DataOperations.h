@@ -6,10 +6,15 @@
 #include <filesystem>
 #include <iostream>
 #include <cstdlib>
+#include <type_traits>
 
 #include "core/DataStructs.h"
 #include "core/DataOperations.h"
 #include "core/TexturePool.h"
+
+// ~~~~~~~~~~~ ALIGNMENT ~~~~~~~~~~~
+uint32_t AlignToDWORD(const uint32_t& offset);
+uint32_t AlignToQWORD(const uint32_t& offset);
 
 // ~~~~~~~~~~~ READ OPERATIONS ~~~~~~~~~~~
 // ~~~ More primitive steps ~~~
@@ -46,5 +51,24 @@ bool WriteLMModels(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& tex
 bool WriteLMModelOrder(uint32_t lmBaseOffset, const LMData& lmData, BinaryFile& outFile);
 bool WriteLMData(const LMData& lmData, BinaryFile& outFile);
 
-// ~~~~~~~~~~~ MISCELLANEOUS ~~~~~~~~~~~
-uint32_t AlignToDWORD(const uint32_t& offset);
+// ~~~~~~~~~~~ RECONCILIATION ~~~~~~~~~~~
+template <typename DiskType = void>
+inline void ReconcilePush(uint32_t& currentOffset, auto& assignedOffset, const auto& container, uint32_t anchor = 0) {
+	if (container.empty()) {
+		return;
+	}
+
+	constexpr size_t elementSize = []() {
+   		if constexpr (std::is_void_v<DiskType>) {
+	        return sizeof(std::ranges::range_value_t<decltype(container)>);
+	    } else {
+	        return sizeof(DiskType);
+	    }
+	}();
+
+	currentOffset 	= AlignToDWORD(currentOffset);
+	assignedOffset 	= currentOffset - anchor;
+	currentOffset  += container.size() * elementSize;
+};
+
+uint32_t ReconcileLMData(uint32_t currentOffset, LMData& lmData);

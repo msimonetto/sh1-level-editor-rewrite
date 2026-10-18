@@ -59,3 +59,22 @@ bool WriteCollision(const CollisionData& collisionData, BinaryFile& outFile) {
 
     return true;
 }
+
+uint32_t ReconcileCollision(uint32_t& currentOffset, CollisionData& collisionData) {
+    collisionData.header.count_IPD_COLL_VERTEX     = collisionData.vertices.size();
+    collisionData.header.count_IPD_COLL_SURFACE    = collisionData.surfaces.size();
+    collisionData.header.count_IPD_COLL_LINE       = collisionData.lines.size();
+    collisionData.header.count_IPD_COLL_CYLINDER   = collisionData.cylinders.size();
+    collisionData.header.count_verticalIdxPool     = collisionData.verticalIdxPool.size();
+    collisionData.header.count_floorIdxPool        = collisionData.floorIdxPool.size();
+
+    ReconcilePush(currentOffset, collisionData.header.offset_IPD_COLL_VERTEX,         collisionData.vertices,         sizeof(IPD_HEADER));
+    ReconcilePush(currentOffset, collisionData.header.offset_IPD_COLL_SURFACE,        collisionData.surfaces,         sizeof(IPD_HEADER));
+    ReconcilePush(currentOffset, collisionData.header.offset_IPD_COLL_LINE,           collisionData.lines,            sizeof(IPD_HEADER));
+    ReconcilePush(currentOffset, collisionData.header.offset_IPD_COLL_CYLINDER,       collisionData.cylinders,        sizeof(IPD_HEADER));
+    ReconcilePush(currentOffset, collisionData.header.offset_IPD_COLL_SUBCELL_LOOKUP, collisionData.subcellLookup,    sizeof(IPD_HEADER));
+    ReconcilePush(currentOffset, collisionData.header.offset_verticalIdxPool,         collisionData.verticalIdxPool,  sizeof(IPD_HEADER));
+    ReconcilePush(currentOffset, collisionData.header.offset_floorIdxPool,            collisionData.floorIdxPool,     sizeof(IPD_HEADER));
+
+    return currentOffset;
+}
