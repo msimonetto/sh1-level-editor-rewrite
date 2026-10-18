@@ -40,14 +40,13 @@ Chunk::~Chunk() {}
 // ~~~~~~~~~~~ READING IPD FILES ~~~~~~~~~~~
 bool Chunk::Parse() {
 	if (this->legal) {
-		// Open IPD file
 		inFile_.stream.open(inFile_.path, std::ios::in | std::ios::binary);
 		if (!inFile_.stream) {
 			std::cerr << "[ERROR]: Failed to open contents of IPD file!" << std::endl;
 			return false;
 		}
 
-		// Unpack IPD header
+		// IPD header
 		UnpackBinary(0, sizeof(IPD_HEADER), &header_, inFile_);
 		if (!(header_.isValid())) {
 			std::cerr << "[ERROR]: Not a valid IPD header, value at position 0x00 is (as int) " << (int)(header_.id) << std::endl;
@@ -63,26 +62,19 @@ bool Chunk::Parse() {
 		std::string filenameChunkHash = filenameStem.substr(filenameStem.length() - 4);
 		assert(chunkHash == filenameChunkHash);
 
-		// Unpack internal LM header
-		uint32_t internalLMBaseOffset = header_.offset_LM_HEADER;
-		
-		UnpackBinary(internalLMBaseOffset, sizeof(LM_HEADER), &internalLMData_.header, inFile_);
-		
 		// Internal LM data
-		ParseLMMaterials(internalLMBaseOffset, internalLMData_, texturePool_, inFile_);
-		ParseLMModels(internalLMBaseOffset, internalLMData_, texturePool_, inFile_);
-		ParseLMModelOrder(internalLMBaseOffset, internalLMData_, inFile_);
+		if (!ParseLMData(header_.offset_LM_HEADER, internalLMData_, texturePool_, inFile_)) { return false; }
 
 		// Model lookup tables, contiguous up until first scene/model buffer
 		uint8_t modelLookupCount = (header_.offset_IPD_SCENE_GROUP - header_.offset_IPD_MODEL_INFO) / sizeof(IPD_MODEL_INFO);
 		modelLookupTable_.resize(modelLookupCount);
-		UnpackToVector(header_.offset_IPD_MODEL_INFO, modelLookupCount, modelLookupTable_, inFile_);
+		if (!UnpackToVector(header_.offset_IPD_MODEL_INFO, modelLookupCount, modelLookupTable_, inFile_)) { return false; }
 
 		// Model render order
-		UnpackToVector(header_.offset_LM_MODEL_ORDER, header_.count_LM_MODEL_ORDER, renderOrder_, inFile_);
+		if (!UnpackToVector(header_.offset_LM_MODEL_ORDER, header_.count_LM_MODEL_ORDER, renderOrder_, inFile_)) { return false; }
 
 		// Visibility table (stored separately, even though in header)
-		UnpackBinary(28, sizeof(IPD_VISIBILITY_TABLE), &visibilityTable_, inFile_);
+		if (!UnpackBinary(28, sizeof(IPD_VISIBILITY_TABLE), &visibilityTable_, inFile_)) { return false; }
 
 		// Scene/model buffer tables
 		sceneGroups_.resize(header_.count_IPD_SCENE_GROUP);
@@ -90,17 +82,19 @@ bool Chunk::Parse() {
 		for (size_t i = 0; i < header_.count_IPD_SCENE_GROUP; ++i) {
 			auto& hdr = sceneGroups_[i].header;
 			
-			UnpackBinary(header_.offset_IPD_SCENE_GROUP + i * sizeof(IPD_SCENE_GROUP), sizeof(IPD_SCENE_GROUP), &hdr, inFile_);
+			if (!UnpackBinary(header_.offset_IPD_SCENE_GROUP + i * sizeof(IPD_SCENE_GROUP), sizeof(IPD_SCENE_GROUP), &hdr, inFile_)) { return false; }
 			
-			UnpackToVector(hdr.offset_IPD_SCENE_GROUP_INSTANCE, hdr.count_IPD_SCENE_GROUP_INSTANCE, sceneGroups_[i].groupInstances, inFile_);
-			UnpackToVector(hdr.offset_IPD_SCENE_BILLBOARD, 		hdr.count_IPD_SCENE_BILLBOARD, 		sceneGroups_[i].billboards, 	inFile_);
-			UnpackToVector(hdr.offset_IPD_SCENE_BOUNDING_BOX, 	hdr.count_IPD_SCENE_BOUNDING_BOX, 	sceneGroups_[i].boundingBoxes, 	inFile_);
+			if (!UnpackToVector(hdr.offset_IPD_SCENE_GROUP_INSTANCE,	hdr.count_IPD_SCENE_GROUP_INSTANCE, sceneGroups_[i].groupInstances, inFile_) ||
+				!UnpackToVector(hdr.offset_IPD_SCENE_BILLBOARD, 		hdr.count_IPD_SCENE_BILLBOARD, 		sceneGroups_[i].billboards, 	inFile_) ||
+				!UnpackToVector(hdr.offset_IPD_SCENE_BOUNDING_BOX, 		hdr.count_IPD_SCENE_BOUNDING_BOX, 	sceneGroups_[i].boundingBoxes, 	inFile_)) {
+				return false;
+			}
 		}
 
 		// Collision
 		// We will untangle this further later, keep in its original structure for now
-		UnpackBinary(sizeof(IPD_HEADER), sizeof(IPD_COLL_HEADER), &collisionData_.header, inFile_);
-		ParseCollision(collisionData_, inFile_);
+		if (!UnpackBinary(sizeof(IPD_HEADER), sizeof(IPD_COLL_HEADER), &collisionData_.header, inFile_)) { return false; }
+		if (!ParseCollision(collisionData_, inFile_)) { return false; }
 
 		inFile_.stream.close();
 
@@ -127,26 +121,30 @@ bool Chunk::Write() {
 		}
 
 		// Fixed block starts at 0, 84
-		PackBinary(0, sizeof(IPD_HEADER), &header_, outFile_);											// Header
-		PackBinary(sizeof(IPD_HEADER), sizeof(IPD_COLL_HEADER), &collisionData_.header, outFile_);		// Collision header
+		if (!PackBinary(0, sizeof(IPD_HEADER), &header_, outFile_) ||										// Header
+			!PackBinary(sizeof(IPD_HEADER), sizeof(IPD_COLL_HEADER), &collisionData_.header, outFile_)) {	// Collision header
+			return false;
+		}
 
 		// Model lookup table w/ fixed block start at 392 (sizeof(IPD_HEADER) + sizeof(IPD_COLL_HEADER))
 		for (size_t i = 0; i < modelLookupTable_.size(); ++i) {
-			PackBinary(sizeof(IPD_HEADER) + sizeof(IPD_COLL_HEADER) + sizeof(IPD_MODEL_INFO) * i, sizeof(IPD_MODEL_INFO), &modelLookupTable_[i], outFile_);
+			if (!PackBinary(sizeof(IPD_HEADER) + sizeof(IPD_COLL_HEADER) + sizeof(IPD_MODEL_INFO) * i, sizeof(IPD_MODEL_INFO), &modelLookupTable_[i], outFile_)) { return false; }
 		}
 
 		// Scene group header
 		assert(header_.offset_IPD_SCENE_GROUP == header_.offset_IPD_MODEL_INFO + sizeof(IPD_MODEL_INFO) * modelLookupTable_.size());
 		for (size_t i = 0; i < sceneGroups_.size(); ++i) {
-			PackBinary(header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * i, sizeof(IPD_SCENE_GROUP), &sceneGroups_[i].header, outFile_);
+			if (!PackBinary(header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * i, sizeof(IPD_SCENE_GROUP), &sceneGroups_[i].header, outFile_)) { return false; }
 		}
 
 		// Scene group instances/payload
 		assert(sceneGroups_[0].header.offset_IPD_SCENE_GROUP_INSTANCE == AlignToDWORD(header_.offset_IPD_SCENE_GROUP + sizeof(IPD_SCENE_GROUP) * sceneGroups_.size()));
 		for (const auto& sceneGroup : sceneGroups_) {
-			PackFromVector(sceneGroup.header.offset_IPD_SCENE_GROUP_INSTANCE, 	sceneGroup.groupInstances, 	outFile_);
-			PackFromVector(sceneGroup.header.offset_IPD_SCENE_BILLBOARD, 		sceneGroup.billboards, 		outFile_);
-			PackFromVector(sceneGroup.header.offset_IPD_SCENE_BOUNDING_BOX, 	sceneGroup.boundingBoxes, 	outFile_);
+			if (!PackFromVector(sceneGroup.header.offset_IPD_SCENE_GROUP_INSTANCE, 	sceneGroup.groupInstances, 	outFile_) ||
+				!PackFromVector(sceneGroup.header.offset_IPD_SCENE_BILLBOARD, 		sceneGroup.billboards, 		outFile_) ||
+				!PackFromVector(sceneGroup.header.offset_IPD_SCENE_BOUNDING_BOX, 	sceneGroup.boundingBoxes, 	outFile_)) {
+				return false;
+			}
 		}
 
 		// Model order payload
@@ -161,23 +159,11 @@ bool Chunk::Write() {
 		WriteCollision(collisionData_, outFile_);
 		uint16_t collisionDataSize = collisionData_.header.offset_floorIdxPool - collisionData_.header.offset_IPD_COLL_VERTEX;
 
-		// Internal LM header (allowance for padding from collision data payload)
+		// Internal LM header (allowance for padding from collision data payload, might change)
 		assert(collisionData_.header.offset_IPD_COLL_VERTEX + sizeof(IPD_HEADER) + collisionDataSize <= header_.offset_LM_HEADER);
-		PackBinary(header_.offset_LM_HEADER, sizeof(LM_HEADER), &internalLMData_.header, outFile_);
+		WriteLMData(header_.offset_LM_HEADER, internalLMData_, texturePool_, outFile_);
 
-		// Internal LM payload
-		WriteLMMaterials(header_.offset_LM_HEADER, internalLMData_, texturePool_, outFile_);
-		WriteLMModels(header_.offset_LM_HEADER, internalLMData_, texturePool_, outFile_);
-		WriteLMModelOrder(header_.offset_LM_HEADER, internalLMData_, outFile_);
-
-		// Zero out until alignment to next 2048 byte sector (just how the file table works)
-		outFile_.stream.seekg(0, std::ios::end);
-		uint32_t finalPosition 		= static_cast<uint32_t>(outFile_.stream.tellp());
-		uint32_t alignedPosition 	= (finalPosition + 2047) & ~2047;
-		if (alignedPosition > finalPosition) {
-			std::vector<char> pad(alignedPosition - finalPosition, 0);
-			PackBinary(finalPosition, pad.size(), pad.data(), outFile_);
-		}
+		AlignFileToSector(outFile_);
 
 		outFile_.stream.close();
 
@@ -191,7 +177,7 @@ bool Chunk::Write() {
 }
 
 // ~~~~~~~~~~~ DYNAMIC EDITING ~~~~~~~~~~~
-// Not immediately necessary for unpacking/packing, but will be important for dynamic packing when file expands or shrinks
+// Not immediately necessary for unpacking/packing, but will be important for dynamic packing when file size expands or shrinks
 bool Chunk::ReconcileHeaders() {
 	uint32_t currentOffset;
 
