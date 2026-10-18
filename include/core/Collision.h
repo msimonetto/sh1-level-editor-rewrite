@@ -10,6 +10,19 @@
 #include "core/DataStructs.h"
 #include "structs/IPD.h"
 
+// To allow for differencing/aggregating
+struct SubcellLookupEntry : IPD_COLL_SUBCELL_LOOKUP {
+    SubcellLookupEntry operator-(const SubcellLookupEntry& other) const {
+        return {{static_cast<uint16_t>(verticalIdx0 - other.verticalIdx0), 
+                 static_cast<uint16_t>(floorIdx0 - other.floorIdx0)}};
+    }
+
+    SubcellLookupEntry operator+(const SubcellLookupEntry& other) const {
+        return {{static_cast<uint16_t>(verticalIdx0 + other.verticalIdx0), 
+                 static_cast<uint16_t>(floorIdx0 + other.floorIdx0)}};
+    }
+};
+
 struct CollisionData {
     IPD_COLL_HEADER                     header;
     int32_t                             positionX;
@@ -26,9 +39,14 @@ struct CollisionData {
     BoundedVector_uint16<uint8_t>                floorIdxPool;
 
     // Members of ordered table per subcell (both verticals and floors)
-    BoundedVector_uint16<IPD_COLL_SUBCELL_LOOKUP>    subcellLookup;      // Maps each subcell in 20x20 grid (+1 member for terminus) to pool value (connected for verticals and floors, not one-to-one)
+    // Maps each subcell in 20x20 grid (+1 member for terminus) to pool value (connected for verticals and floors, not one-to-one)
+    BoundedVector_uint16<SubcellLookupEntry>    subcellLookupAggregated;    // From original
+    BoundedVector_uint16<SubcellLookupEntry>    subcellLookupDifferenced;   // For editing
 };
 
 bool ParseCollision(CollisionData& collisionData, BinaryFile& inFile);
 bool WriteCollision(const CollisionData& collisionData, BinaryFile& outFile);
 uint32_t ReconcileCollision(uint32_t& currentOffset, CollisionData& collisionData);
+
+bool DifferenceSubcellCounts(CollisionData& collisionData);
+bool AggregateSubcellCounts(CollisionData& collisionData);
