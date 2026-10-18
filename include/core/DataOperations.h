@@ -34,10 +34,10 @@ bool UnpackToVector(uint32_t offset, size_t count, std::vector<T>& output, Binar
 }
 
 // ~~~ More in-depth routines (likely shared) ~~~
-bool ParseLMMaterials(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& inFile);
-bool ParseLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& inFile);
+bool ParseLMMaterials(uint32_t lmBaseOffset, LMData& lmData, BinaryFile& inFile);
+bool ParseLMModels(uint32_t lmBaseOffset, LMData& lmData, BinaryFile& inFile);
 bool ParseLMModelOrder(uint32_t lmBaseOffset, LMData& lmData, BinaryFile& inFile);
-bool ParseLMData(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& inFile);
+bool ParseLMData(uint32_t lmBaseOffset, LMData& lmData, BinaryFile& inFile);
 
 // ~~~~~~~~~~~ WRITE OPERATIONS ~~~~~~~~~~~
 bool PackBinary(uint32_t offset, size_t length, const void* input, BinaryFile& outFile);
@@ -52,10 +52,10 @@ bool PackFromVector(uint32_t offset, const std::vector<T>& input, BinaryFile& ou
     return PackBinary(offset, input.size() * sizeof(T), input.data(), outFile);
 }
 
-bool WriteLMMaterials(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile);
-bool WriteLMModels(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile);
+bool WriteLMMaterials(uint32_t lmBaseOffset, const LMData& lmData, BinaryFile& outFile);
+bool WriteLMModels(uint32_t lmBaseOffset, const LMData& lmData, BinaryFile& outFile);
 bool WriteLMModelOrder(uint32_t lmBaseOffset, const LMData& lmData, BinaryFile& outFile);
-bool WriteLMData(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile);
+bool WriteLMData(uint32_t lmBaseOffset, const LMData& lmData, BinaryFile& outFile);
 
 // ~~~~~~~~~~~ RECONCILIATION ~~~~~~~~~~~
 template <typename DiskType = void>

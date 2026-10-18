@@ -51,7 +51,7 @@ bool UnpackBinary(uint32_t offset, size_t length, void* output, BinaryFile& inFi
 	return true;
 }
 
-bool ParseLMMaterials(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& inFile) {
+bool ParseLMMaterials(uint32_t lmBaseOffset, LMData& lmData, BinaryFile& inFile) {
 	// Locate first material and the material count
 	int materialBaseOffset 	= lmBaseOffset + lmData.header.offset_LM_MATERIAL;
 	int materialCount 		= lmData.header.count_LM_MATERIAL;
@@ -67,17 +67,12 @@ bool ParseLMMaterials(uint32_t lmBaseOffset, LMData& lmData, TexturePool& textur
 				&material, inFile)) {
 			return false;
 		}
-
-		// Add unique textures (material.name) to texturePool
-		if (!texturePool.AcquireTexture(material.name.str)) {
-			return false;
-		}
 	}
 
 	return true;
 }
 
-bool ParseLMModels(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& inFile) {
+bool ParseLMModels(uint32_t lmBaseOffset, LMData& lmData, BinaryFile& inFile) {
 	// Locate first model and the model count
 	int modelBaseOffset = lmBaseOffset + lmData.header.offset_LM_MODEL_HEADER;
 	int modelCount 		= lmData.header.count_LM_MODEL_HEADER;
@@ -138,16 +133,16 @@ bool ParseLMModelOrder(uint32_t lmBaseOffset, LMData& lmData, BinaryFile& inFile
 	return true;
 }
 
-bool ParseLMData(uint32_t lmBaseOffset, LMData& lmData, TexturePool& texturePool, BinaryFile& inFile) {
+bool ParseLMData(uint32_t lmBaseOffset, LMData& lmData, BinaryFile& inFile) {
 	// Internal LM header
 	if (!UnpackBinary(lmBaseOffset, sizeof(LM_HEADER), &lmData.header, inFile)) {
 		return false;
 	}
 		
 	// Internal LM data
-	if (!ParseLMMaterials(lmBaseOffset, 	lmData, texturePool, 	inFile) ||
-		!ParseLMModels(lmBaseOffset, 		lmData, texturePool, 	inFile) ||
-		!ParseLMModelOrder(lmBaseOffset, 	lmData, 				inFile)) {
+	if (!ParseLMMaterials(lmBaseOffset,		lmData,	inFile) ||
+		!ParseLMModels(lmBaseOffset, 		lmData,	inFile) ||
+		!ParseLMModelOrder(lmBaseOffset,	lmData,	inFile)) {
 		return false;
 	}
 
@@ -169,7 +164,7 @@ bool PackBinary(uint32_t offset, size_t length, const void* input, BinaryFile& o
 	return true;
 }
 
-bool WriteLMMaterials(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile) {
+bool WriteLMMaterials(uint32_t lmBaseOffset, const LMData& lmData, BinaryFile& outFile) {
 	// Locate first material and the material count
 	int materialBaseOffset 	= lmBaseOffset + lmData.header.offset_LM_MATERIAL;
 	int materialCount 		= lmData.header.count_LM_MATERIAL;
@@ -189,7 +184,7 @@ bool WriteLMMaterials(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& 
 	return true;
 }
 
-bool WriteLMModels(uint32_t lmBaseOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile) {
+bool WriteLMModels(uint32_t lmBaseOffset, const LMData& lmData, BinaryFile& outFile) {
 	// Locate first model and the model count (already reconciled)
 	int modelBaseOffset = lmBaseOffset + lmData.header.offset_LM_MODEL_HEADER;
 	int modelCount 		= lmData.header.count_LM_MODEL_HEADER;
@@ -246,14 +241,14 @@ bool WriteLMModelOrder(uint32_t lmBaseOffset, const LMData& lmData, BinaryFile& 
 	return true;
 }
 
-bool WriteLMData(uint32_t lmHeaderOffset, const LMData& lmData, TexturePool& texturePool, BinaryFile& outFile) {
+bool WriteLMData(uint32_t lmHeaderOffset, const LMData& lmData, BinaryFile& outFile) {
 	// Header
 	if (!PackBinary(lmHeaderOffset, sizeof(LM_HEADER), &lmData.header, outFile)) { return false; }
 
 	// Payload
-	if (!WriteLMMaterials(lmHeaderOffset, 	lmData, texturePool, 	outFile) ||
-		!WriteLMModels(lmHeaderOffset, 		lmData, texturePool, 	outFile) ||
-		!WriteLMModelOrder(lmHeaderOffset, 	lmData, 				outFile)) {
+	if (!WriteLMMaterials(lmHeaderOffset, 	lmData,	outFile) ||
+		!WriteLMModels(lmHeaderOffset, 		lmData, outFile) ||
+		!WriteLMModelOrder(lmHeaderOffset, 	lmData, outFile)) {
 		return false;
 	}
 

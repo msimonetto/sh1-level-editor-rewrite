@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <vector>
 #include <variant>
-#include <unordered_map>
+#include <unordered_set>
 
 #include "core/Collision.h"
 #include "core/DataStructs.h"
@@ -39,6 +39,9 @@ class Chunk {
 		// ~~~ Collision ~~~
 		CollisionData		collisionData_;
 
+		// Globals
+		std::unordered_set<std::string>		dependentTextures_;			// Consider limiting size based on engine constraints
+		std::unordered_set<std::string>		dependentGlobalObjects_;
 		TexturePool&		texturePool_;
 		GlobalObjects&		globalObjects_;
 
@@ -60,6 +63,7 @@ class Chunk {
 
 		bool Parse();
 		bool Write();
+		bool GetDependencies();
 		bool ReconcileHeaders();
 
 		int GetSizeInPath();

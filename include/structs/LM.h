@@ -79,7 +79,7 @@ struct LM_TEXTURE {
 // LM_MATERIAL (size: 24 bytes)
 struct LM_MATERIAL {
     u_Filename      name;
-    uint32_t        offset_texture; 
+    uint32_t        offset_texture;
     uint8_t         field_C;
     uint8_t         unk_D[1];
     uint8_t         tPage;                          // Unknown in Sparagas, field_E

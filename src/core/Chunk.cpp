@@ -63,7 +63,7 @@ bool Chunk::Parse() {
 		assert(chunkHash == filenameChunkHash);
 
 		// Internal LM data
-		if (!ParseLMData(header_.offset_LM_HEADER, internalLMData_, texturePool_, inFile_)) { return false; }
+		if (!ParseLMData(header_.offset_LM_HEADER, internalLMData_, inFile_)) { return false; }
 
 		// Model lookup tables, contiguous up until first scene/model buffer
 		uint8_t modelLookupCount = (header_.offset_IPD_SCENE_GROUP - header_.offset_IPD_MODEL_INFO) / sizeof(IPD_MODEL_INFO);
@@ -161,7 +161,7 @@ bool Chunk::Write() {
 
 		// Internal LM header (allowance for padding from collision data payload, might change)
 		assert(collisionData_.header.offset_IPD_COLL_VERTEX + sizeof(IPD_HEADER) + collisionDataSize <= header_.offset_LM_HEADER);
-		WriteLMData(header_.offset_LM_HEADER, internalLMData_, texturePool_, outFile_);
+		WriteLMData(header_.offset_LM_HEADER, internalLMData_, outFile_);
 
 		AlignFileToSector(outFile_);
 
@@ -174,6 +174,30 @@ bool Chunk::Write() {
 		std::cout << "Fix existing integrity issues before packing!" << std::endl;
 		return false;
 	}
+}
+
+bool Chunk::GetDependencies() {
+	// Identifies dependent global models
+	// std::cout << "e" << std::endl;
+	// for (const auto& modelEntry : modelLookupTable_) {
+	// 	std::cout << "c" << std::endl;
+	// 	if (modelEntry.isGlobalPlm) {
+	// 		std::cout << "a" << std::endl;
+	// 		dependentGlobalObjects_.insert(modelEntry.name.str);
+	// 	}
+	// }
+	//
+	// Identifies dependent textures from global models
+	//
+	// Identifies dependent textures from internally embedded models
+	// for (const auto& material : internalLMData_.materials) {
+	//	std::cout << "b" << std::endl;
+	//	std::cout << material.name.str << std::endl;
+	//	dependentTextures_.insert(material.name.str);
+	//	texturePool_.AcquireTexture(material.name.str);
+	//}
+
+	return true;
 }
 
 // ~~~~~~~~~~~ DYNAMIC EDITING ~~~~~~~~~~~
