@@ -6,7 +6,7 @@
 #include <filesystem>
 
 #include "core/Chunk.h"
-#include "core/FileTable.h"
+#include "mgmt/FileTable.h"
 #include "mgmt/Workspace.h"
 #include "mgmt/HexOperations.h"
 #include "mgmt/FileOperations.h"

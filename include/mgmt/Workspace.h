@@ -9,7 +9,7 @@
 #include "core/Chunk.h"
 #include "core/GlobalObjects.h"
 #include "core/TexturePool.h"
-#include "core/FileTable.h"
+#include "mgmt/FileTable.h"
 #include "mgmt/HexOperations.h"
 
 // Takes in extracts and output directory, manages chunk loading/offloading, required global object banks and texture pools

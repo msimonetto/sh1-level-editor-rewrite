@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <nlohmann/json.hpp>
 
-#include "core/FileTable.h"
+#include "mgmt/FileTable.h"
 #include "mgmt/FileOperations.h"
 
 FileTable::FileTable(const std::filesystem::path& path) {
