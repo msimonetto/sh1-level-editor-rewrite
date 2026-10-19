@@ -16,7 +16,8 @@
 // Prefix-specific
 class Workspace {
     private:
-        // std::string sourceDir = "/mnt/data/Projects/sh1-level-editor-rewrite/data/Game Extracts/BG/THR0000.IPD"; // Linux
+        std::string             name;
+
         std::filesystem::path   sourceDir;
         std::filesystem::path   targetDir;
         std::string             prefix;
@@ -30,6 +31,8 @@ class Workspace {
     public:
         Workspace(const std::filesystem::path& dir, const std::string& prefix);
         ~Workspace();
+
+        void SetWorkspaceName(std::string newName) { this->name = newName; };
 
         bool AddChunk(int8_t x, int8_t z);
         bool RemoveChunk(int8_t x, int8_t z);
